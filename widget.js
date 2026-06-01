@@ -545,15 +545,20 @@ var generatedAvatars = [];
 
 function generateAvatarUrl(style, seed) {
   if (!seed) seed = Math.random().toString(36).substring(7);
-  return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
+  var timestamp = Date.now();
+  var random = Math.random().toString(36).substring(7);
+  return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}&t=${timestamp}&r=${random}`;
 }
 
 function generateMultipleAvatars(style, count = 6) {
   generatedAvatars = [];
+  var timestamp = Date.now();
+  
   for (var i = 0; i < count; i++) {
+    var uniqueSeed = currentUserEmail + '_' + timestamp + '_' + i + '_' + Math.random().toString(36).substring(7);
     generatedAvatars.push({
-      url: generateAvatarUrl(style, currentUserEmail + '_' + i),
-      seed: currentUserEmail + '_' + i
+      url: generateAvatarUrl(style, uniqueSeed),
+      seed: uniqueSeed
     });
   }
   return generatedAvatars;
@@ -941,6 +946,7 @@ function generateNewAvatars() {
   
   var avatars = generateMultipleAvatars(currentAvatarStyle, 6);
   console.log('[PronoSPIc] Generated avatars:', avatars);
+  console.log('[PronoSPIc] Sample avatar URL:', avatars[0] ? avatars[0].url : 'No avatar generated');
   
   var grid = document.getElementById('avatar-grid');
   if (!grid) {
@@ -951,17 +957,19 @@ function generateNewAvatars() {
   
   var html = '';
   avatars.forEach(function(avatar, index) {
+    console.log('[PronoSPIc] Creating avatar HTML for index', index, 'URL:', avatar.url);
     html += '<div style="text-align: center; cursor: pointer; padding: 8px; border: 2px solid #e2e8f0; border-radius: 12px; transition: all 0.2s;" ';
     html += 'onmouseover="this.style.borderColor=\'#7c1d4e\'; this.style.transform=\'scale(1.05)\'" ';
     html += 'onmouseout="this.style.borderColor=\'#e2e8f0\'; this.style.transform=\'scale(1)\'" ';
     html += 'onclick="selectGeneratedAvatar(\'' + sanitize(avatar.url) + '\')">';
-    html += '<img src="' + sanitize(avatar.url) + '" style="width: 60px; height: 60px; border-radius: 50%; margin-bottom: 4px;">';
+    html += '<img src="' + sanitize(avatar.url) + '" style="width: 60px; height: 60px; border-radius: 50%; margin-bottom: 4px;" ';
+    html += 'onerror="console.log(\'Avatar load error for URL:', \'' + sanitize(avatar.url) + '\'); this.src=\'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMC4wMCI+Pjwvc3ZnPg==\';">';
     html += '<div style="font-size: 10px; color: #94a3b8;">' + t('avatarUseGenerated') + '</div>';
     html += '</div>';
   });
   
   grid.innerHTML = html;
-  console.log('[PronoSPIc] Avatar grid updated');
+  console.log('[PronoSPIc] Avatar grid updated with HTML length:', html.length);
 }
 
 function selectGeneratedAvatar(avatarUrl) {
