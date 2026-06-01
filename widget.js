@@ -13,7 +13,7 @@ var currentLang = (navigator.language || 'fr').substring(0, 2) === 'en' ? 'en' :
 var i18n = {
   fr: {
     subtitle: 'Pronostics Coupe du Monde 2026',
-    tabMatches: 'Matchs', tabGroups: 'Groupes', tabLeaderboard: 'Classement', tabMyStats: 'Mes Stats',
+    tabMatches: 'Matchs', tabGroups: 'Groupes', tabLeaderboard: 'Classement', tabMyStats: 'Mes Stats', tabProfile: 'Mon Profil',
     allMatches: 'Tous', groupStage: 'Poules', roundOf32: '1/16', quarterFinals: '1/4', semiFinals: '1/2', thirdPlace: '3e place', final: 'Finale',
     today: "Aujourd'hui", tomorrow: 'Demain', all: 'Tous',
     saveProno: 'Valider', saved: 'Validé ✓', noMatches: 'Aucun match',
@@ -26,12 +26,14 @@ var i18n = {
     refreshResults: 'Rafraîchir les résultats', refreshing: 'Récupération...',
     bonusTitle: 'Pronos Bonus', bonusWinner: 'Vainqueur final', bonusTopScorer: 'Meilleur buteur',
     bonusSave: 'Enregistrer mes bonus', bonusSaved: 'Bonus enregistrés ✓',
+    profileTitle: 'Mon Profil', profileName: 'Nom d\'affichage', profileSave: 'Enregistrer mon profil',
+    profileSaved: 'Profil enregistré ✓', profileAvatar: 'URL de l\'avatar (optionnel)',
     tbd: 'À déterminer', matchNumber: 'Match', vs: '-',
     group: 'Groupe', noPronosYet: 'Tu n\'as pas encore pronostiqué'
   },
   en: {
     subtitle: 'World Cup 2026 Predictions',
-    tabMatches: 'Matches', tabGroups: 'Groups', tabLeaderboard: 'Leaderboard', tabMyStats: 'My Stats',
+    tabMatches: 'Matches', tabGroups: 'Groups', tabLeaderboard: 'Leaderboard', tabMyStats: 'My Stats', tabProfile: 'My Profile',
     allMatches: 'All', groupStage: 'Groups', roundOf32: 'R16', quarterFinals: 'QF', semiFinals: 'SF', thirdPlace: '3rd', final: 'Final',
     today: 'Today', tomorrow: 'Tomorrow', all: 'All',
     saveProno: 'Submit', saved: 'Saved ✓', noMatches: 'No matches',
@@ -44,6 +46,8 @@ var i18n = {
     refreshResults: 'Refresh Results', refreshing: 'Fetching...',
     bonusTitle: 'Bonus Predictions', bonusWinner: 'Tournament winner', bonusTopScorer: 'Top scorer',
     bonusSave: 'Save bonus', bonusSaved: 'Bonus saved ✓',
+    profileTitle: 'My Profile', profileName: 'Display Name', profileSave: 'Save Profile',
+    profileSaved: 'Profile saved ✓', profileAvatar: 'Avatar URL (optional)',
     tbd: 'TBD', matchNumber: 'Match', vs: '-',
     group: 'Group', noPronosYet: 'No predictions yet'
   }
@@ -73,6 +77,7 @@ var matches = [];
 var predictions = [];
 var allPredictions = [];
 var bonusData = [];
+var profiles = [];
 var activeTab = 'matches';
 var activePhaseFilter = 'all';
 var activeGroupFilter = '';
@@ -82,6 +87,7 @@ var MATCHES_TABLE = 'Prono_Matches';
 var PREDICTIONS_TABLE = 'Prono_Predictions';
 var BONUS_TABLE = 'Prono_Bonus';
 var USERINFO_TABLE = 'Prono_UserInfo';
+var PROFILES_TABLE = 'Prono_Profiles';
 
 // =============================================================================
 // DATA: 48 TEAMS
@@ -332,6 +338,7 @@ function renderCurrentTab() {
   if (activeTab === 'groups') renderGroupsView();
   if (activeTab === 'leaderboard') renderLeaderboard();
   if (activeTab === 'mystats') renderMyStats();
+  if (activeTab === 'profile') renderProfile();
   if (activeTab === 'admin') renderAdmin();
 }
 
@@ -377,6 +384,12 @@ async function ensureTables() {
       await grist.docApi.applyUserActions([['ModifyColumn', USERINFO_TABLE, 'UserEmail', {
         isFormula: false, formula: 'user.Email', recalcWhen: 2, recalcDeps: null
       }]]);
+    }
+    if (tables.indexOf(PROFILES_TABLE) === -1) {
+      await grist.docApi.applyUserActions([['AddTable', PROFILES_TABLE, [
+        { id: 'User_Email', type: 'Text' }, { id: 'Display_Name', type: 'Text' },
+        { id: 'Avatar_URL', type: 'Text' }
+      ]]]);
     }
   } catch (e) {
     console.warn('[PronoSPIc] ensureTables error:', e.message);
@@ -450,6 +463,41 @@ async function loadAllData() {
       }
     }
   } catch (e) { bonusData = []; }
+
+  try {
+    var prd = await grist.docApi.fetchTable(PROFILES_TABLE);
+    profiles = [];
+    if (prd && prd.id) {
+      for (var l = 0; l < prd.id.length; l++) {
+        profiles.push({ 
+          id: prd.id[l], 
+          email: prd.User_Email[l], 
+          displayName: prd.Display_Name[l], 
+          avatarUrl: prd.Avatar_URL[l] 
+        });
+      }
+    }
+  } catch (e) { profiles = []; }
+}
+
+// =============================================================================
+// PROFILE HELPERS
+// =============================================================================
+
+function getDisplayName(email) {
+  if (!email) return '';
+  var profile = profiles.find(function(p) { return p.email === email; });
+  if (profile && profile.displayName) {
+    return profile.displayName;
+  }
+  // Fallback: use part before @
+  return email.split('@')[0];
+}
+
+function getAvatarUrl(email) {
+  if (!email) return '';
+  var profile = profiles.find(function(p) { return p.email === email; });
+  return profile ? profile.avatarUrl : '';
 }
 
 // =============================================================================
@@ -710,7 +758,7 @@ function renderLeaderboard() {
       var medal = ranked.length >= 3 ? medals[pi] : medals[pi === 0 ? 1 : (pi === 1 ? 0 : 2)];
       html += '<div class="podium-item ' + cls + '">';
       html += '<div class="podium-rank">' + medal + '</div>';
-      html += '<div class="podium-name">' + sanitize(p.email.split('@')[0]) + '</div>';
+      html += '<div class="podium-name">' + sanitize(getDisplayName(p.email)) + '</div>';
       html += '<div class="podium-points">' + p.total + ' ' + t('pts') + '</div>';
       html += '</div>';
     }
@@ -723,13 +771,114 @@ function renderLeaderboard() {
   ranked.forEach(function(p, i) {
     html += '<tr>';
     html += '<td class="lb-rank">' + (i + 1) + '</td>';
-    html += '<td>' + sanitize(p.email.split('@')[0]) + '</td>';
+    html += '<td>' + sanitize(getDisplayName(p.email)) + '</td>';
     html += '<td>' + p.exact + '</td><td>' + p.good + '</td>';
     html += '<td class="lb-points">' + p.total + '</td>';
     html += '</tr>';
   });
   html += '</tbody></table>';
   container.innerHTML = html;
+}
+
+// =============================================================================
+// RENDER: PROFILE
+// =============================================================================
+
+function renderProfile() {
+  var container = document.getElementById('profile-content');
+  var myProfile = profiles.find(function(p) { return p.email === currentUserEmail; });
+  
+  var currentDisplayName = myProfile ? myProfile.displayName : '';
+  var currentAvatar = myProfile ? myProfile.avatarUrl : '';
+  
+  var html = '<div style="max-width: 500px; margin: 0 auto;">';
+  html += '<h2 style="margin-bottom: 20px; text-align: center;">' + t('profileTitle') + '</h2>';
+  
+  html += '<div style="background: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">';
+  
+  // Avatar preview
+  html += '<div style="text-align: center; margin-bottom: 20px;">';
+  if (currentAvatar) {
+    html += '<img id="avatar-preview" src="' + sanitize(currentAvatar) + '" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #e2e8f0;">';
+  } else {
+    html += '<div id="avatar-preview" style="width: 80px; height: 80px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 32px; color: #94a3b8; margin: 0 auto;">👤</div>';
+  }
+  html += '</div>';
+  
+  // Form fields
+  html += '<div style="margin-bottom: 16px;">';
+  html += '<label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151;">' + t('profileName') + '</label>';
+  html += '<input type="text" id="profile-display-name" value="' + sanitize(currentDisplayName) + '" ';
+  html += 'placeholder="' + sanitize(currentUserEmail.split('@')[0]) + '" ';
+  html += 'style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; outline: none;">';
+  html += '</div>';
+  
+  html += '<div style="margin-bottom: 20px;">';
+  html += '<label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151;">' + t('profileAvatar') + '</label>';
+  html += '<input type="url" id="profile-avatar-url" value="' + sanitize(currentAvatar) + '" ';
+  html += 'placeholder="https://..." ';
+  html += 'style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; outline: none;" ';
+  html += 'oninput="updateAvatarPreview(this.value)">';
+  html += '</div>';
+  
+  html += '<button class="btn-prono" onclick="saveProfile()" style="width: 100%;">' + t('profileSave') + '</button>';
+  html += '</div>';
+  
+  // Info section
+  html += '<div style="margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 12px; font-size: 13px; color: #64748b;">';
+  html += '<div style="margin-bottom: 8px;"><strong>Email:</strong> ' + sanitize(currentUserEmail) + '</div>';
+  html += '<div><strong>Nom affiché:</strong> ' + sanitize(currentDisplayName || currentUserEmail.split('@')[0]) + '</div>';
+  html += '</div>';
+  
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function updateAvatarPreview(url) {
+  var preview = document.getElementById('avatar-preview');
+  if (url && url.match(/^https?:\/\/.+/)) {
+    preview.outerHTML = '<img id="avatar-preview" src="' + sanitize(url) + '" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #e2e8f0;">';
+  } else {
+    preview.outerHTML = '<div id="avatar-preview" style="width: 80px; height: 80px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 32px; color: #94a3b8; margin: 0 auto;">👤</div>';
+  }
+}
+
+async function saveProfile() {
+  var displayName = document.getElementById('profile-display-name').value.trim();
+  var avatarUrl = document.getElementById('profile-avatar-url').value.trim();
+  
+  try {
+    var myProfile = profiles.find(function(p) { return p.email === currentUserEmail; });
+    
+    if (myProfile) {
+      // Update existing profile
+      await grist.docApi.applyUserActions([['UpdateRecord', PROFILES_TABLE, myProfile.id, {
+        Display_Name: displayName,
+        Avatar_URL: avatarUrl
+      }]]);
+      myProfile.displayName = displayName;
+      myProfile.avatarUrl = avatarUrl;
+    } else {
+      // Create new profile
+      await grist.docApi.applyUserActions([['AddRecord', PROFILES_TABLE, null, {
+        User_Email: currentUserEmail,
+        Display_Name: displayName,
+        Avatar_URL: avatarUrl
+      }]]);
+      profiles.push({
+        email: currentUserEmail,
+        displayName: displayName,
+        avatarUrl: avatarUrl
+      });
+    }
+    
+    showToast(t('profileSaved'), 'success');
+    renderProfile(); // Refresh the profile view
+    renderLeaderboard(); // Refresh leaderboard to show new name
+    
+  } catch (e) {
+    showToast('Erreur: ' + e.message, 'error');
+  }
 }
 
 // =============================================================================
