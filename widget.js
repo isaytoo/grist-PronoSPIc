@@ -592,30 +592,28 @@ function updateHeaderUserInfo() {
   }
 }
 
-// Avatar generator functions with gender-specific styles
-// sex[] param: male, female supported by avataaars, adventurer, lorelei, notionists, pixel-art
+// Avatar styles - styles supporting sex[] param: avataaars, adventurer
+// For male/female: all styles shown but sex[] applied to the URL
+// For neutral: all styles without sex restriction
 var avatarStyles = {
   male: [
-    { id: 'avataaars', name: 'Personnage Cartoon', description: 'Personnage masculin', sex: 'male' },
-    { id: 'adventurer', name: 'Aventurier', description: 'Aventurier masculin', sex: 'male' },
-    { id: 'lorelei', name: 'Personnage Animé', description: 'Personnage animé masculin', sex: 'male' },
-    { id: 'notionists', name: 'Professionnel', description: 'Style professionnel masculin', sex: 'male' }
+    { id: 'avataaars', name: 'Personnage Cartoon', description: 'Filtré masculin' },
+    { id: 'adventurer', name: 'Aventurier', description: 'Filtré masculin' }
   ],
   female: [
-    { id: 'avataaars', name: 'Personnage Cartoon', description: 'Personnage féminin', sex: 'female' },
-    { id: 'adventurer', name: 'Aventurière', description: 'Aventurière féminine', sex: 'female' },
-    { id: 'lorelei', name: 'Personnage Animé', description: 'Personnage animé féminin', sex: 'female' },
-    { id: 'notionists', name: 'Professionnel', description: 'Style professionnel féminin', sex: 'female' }
+    { id: 'avataaars', name: 'Personnage Cartoon', description: 'Filtré féminin' },
+    { id: 'adventurer', name: 'Aventurière', description: 'Filtré féminin' },
+    { id: 'lorelei', name: 'Personnage Animé', description: 'Style féminin' }
   ],
   neutral: [
-    { id: 'avataaars', name: 'Personnage Cartoon', description: 'Avatar neutre stylisé', sex: null },
-    { id: 'bottts', name: 'Robot', description: 'Avatar robotique moderne', sex: null },
-    { id: 'lorelei', name: 'Personnage Animé', description: 'Style manga/anime', sex: null },
-    { id: 'notionists', name: 'Professionnel', description: 'Style professionnel minimaliste', sex: null },
-    { id: 'adventurer', name: 'Aventurier', description: 'Style aventure et exploration', sex: null },
-    { id: 'identicon', name: 'Géométrique', description: 'Formes géométriques colorées', sex: null },
-    { id: 'shapes', name: 'Formes', description: 'Formes abstraites', sex: null },
-    { id: 'pixel-art', name: 'Pixel Art', description: 'Style rétro 8-bits', sex: null }
+    { id: 'avataaars', name: 'Personnage Cartoon', description: 'Style classique' },
+    { id: 'bottts', name: 'Robot', description: 'Avatar robotique' },
+    { id: 'lorelei', name: 'Personnage Animé', description: 'Style manga/anime' },
+    { id: 'notionists', name: 'Professionnel', description: 'Style minimaliste' },
+    { id: 'adventurer', name: 'Aventurier', description: 'Style aventure' },
+    { id: 'identicon', name: 'Géométrique', description: 'Formes géométriques' },
+    { id: 'shapes', name: 'Formes', description: 'Formes abstraites' },
+    { id: 'pixel-art', name: 'Pixel Art', description: 'Style rétro 8-bits' }
   ]
 };
 
@@ -634,19 +632,15 @@ function generateMultipleAvatars(style, count = 6) {
   generatedAvatars = [];
   var timestamp = Date.now();
   
-  // Get gender-specific styles if available, otherwise use neutral
-  var genderStyles = avatarStyles[currentGender] || avatarStyles.neutral;
+  // Apply sex[] parameter based on current gender
+  var sex = currentGender === 'male' ? 'male' : (currentGender === 'female' ? 'female' : null);
   
   for (var i = 0; i < count; i++) {
-    var styleObj = genderStyles[i % genderStyles.length];
-    var avatarStyle = styleObj.id;
-    var sex = styleObj.sex || null;
-    
     var uniqueSeed = currentUserEmail + '_' + currentGender + '_' + timestamp + '_' + i + '_' + Math.random().toString(36).substring(7);
     generatedAvatars.push({
-      url: generateAvatarUrl(avatarStyle, uniqueSeed, sex),
+      url: generateAvatarUrl(style, uniqueSeed, sex),
       seed: uniqueSeed,
-      style: avatarStyle
+      style: style
     });
   }
   return generatedAvatars;
