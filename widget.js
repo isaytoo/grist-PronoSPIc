@@ -1333,6 +1333,65 @@ async function recalculateAllPoints() {
 }
 
 // =============================================================================
+// ACL SECURITY
+// =============================================================================
+
+var PRONO_ACL_RULES = [
+  { tableId: 'Prono_Teams',       ownerPerms: '+CRUDS', editorPerms: '+R-CUD' },
+  { tableId: 'Prono_Matches',     ownerPerms: '+CRUDS', editorPerms: '+R-CUD' },
+  { tableId: 'Prono_Predictions', ownerPerms: '+CRUDS', editorPerms: '+RCUD' },
+  { tableId: 'Prono_Bonus',       ownerPerms: '+CRUDS', editorPerms: '+RCUD' },
+  { tableId: 'Prono_UserInfo',    ownerPerms: '+CRUDS', editorPerms: '+RCUD' }
+];
+
+async function applySecurityRules() {
+  try {
+    var resourcesData = await grist.docApi.fetchTable('_grist_ACLResources');
+    var rulesData = await grist.docApi.fetchTable('_grist_ACLRules');
+    var existingTables = await grist.docApi.listTables();
+    var actions = [];
+    var tempId = -1000;
+
+    for (var r = 0; r < PRONO_ACL_RULES.length; r++) {
+      var rule = PRONO_ACL_RULES[r];
+      if (existingTables.indexOf(rule.tableId) === -1) continue;
+
+      var alreadyHasRules = false;
+      for (var ri = 0; ri < rulesData.id.length; ri++) {
+        if (rulesData.memo && rulesData.memo[ri] && rulesData.memo[ri].indexOf('PronoSPIc') !== -1) {
+          var resId = rulesData.resource[ri];
+          for (var rsi = 0; rsi < resourcesData.id.length; rsi++) {
+            if (resourcesData.id[rsi] === resId && resourcesData.tableId[rsi] === rule.tableId) {
+              alreadyHasRules = true; break;
+            }
+          }
+        }
+        if (alreadyHasRules) break;
+      }
+      if (alreadyHasRules) continue;
+
+      var tempResourceId = tempId--;
+      actions.push(['AddRecord', '_grist_ACLResources', tempResourceId, { tableId: rule.tableId, colIds: '*' }]);
+      actions.push(['AddRecord', '_grist_ACLRules', null, {
+        resource: tempResourceId, aclFormula: 'user.Access in [OWNER]',
+        permissionsText: rule.ownerPerms, memo: 'PronoSPIc - Owner'
+      }]);
+      actions.push(['AddRecord', '_grist_ACLRules', null, {
+        resource: tempResourceId, aclFormula: '',
+        permissionsText: rule.editorPerms, memo: 'PronoSPIc - Default'
+      }]);
+    }
+
+    if (actions.length > 0) {
+      await grist.docApi.applyUserActions(actions);
+      showToast(currentLang === 'fr' ? 'Sécurité activée' : 'Security enabled', 'success');
+    }
+  } catch (e) {
+    console.warn('[PronoSPIc] ACL apply skipped:', e.message);
+  }
+}
+
+// =============================================================================
 // ROLE DETECTION
 // =============================================================================
 
@@ -1397,31 +1456,28 @@ var TEAM_NAME_MAPPING = {
 
 async function fetchMatchResults() {
   try {
-    showToast('Récupération des résultats...', 'info');
-    
-    const response = await fetch(WORLD_CUP_API_URL);
-    if (!response.ok) {
-      throw new Error('Erreur réseau: ' + response.status);
-    }
-    
-    const data = await response.json();
-    const updatedMatches = [];
+    showToast(t('refreshing'), 'info');
+    var response = await fetch(WORLD_CUP_API_URL);
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    var data = await response.json();
+    var updatedMatches = [];
     
     // Process each match from API
-    for (const apiMatch of data.matches) {
-      // Find corresponding match in our data
-      const localMatch = matches.find(m => {
-        const team1Name = teamName(m.t1);
-        const team2Name = teamName(m.t2);
-        
-        return (team1Name === apiMatch.team1 && team2Name === apiMatch.team2) ||
-               (team1Name === apiMatch.team2 && team2Name === apiMatch.team1);
+    for (var ai = 0; ai < data.matches.length; ai++) {
+      var apiMatch = data.matches[ai];
+      var localMatch = matches.find(function(m) {
+        var t1 = getTeam(m.t1); var t2 = getTeam(m.t2);
+        var names1 = [t1.name_en, t1.name_fr, t1.code].map(function(n) { return (n || '').toLowerCase(); });
+        var names2 = [t2.name_en, t2.name_fr, t2.code].map(function(n) { return (n || '').toLowerCase(); });
+        var api1 = (apiMatch.team1 || '').toLowerCase();
+        var api2 = (apiMatch.team2 || '').toLowerCase();
+        return (names1.indexOf(api1) !== -1 && names2.indexOf(api2) !== -1) ||
+               (names1.indexOf(api2) !== -1 && names2.indexOf(api1) !== -1);
       });
       
       if (localMatch && apiMatch.score && apiMatch.score.ft) {
-        const [apiScore1, apiScore2] = apiMatch.score.ft;
-        
-        // Update if scores are different and match has results
+        var apiScore1 = apiMatch.score.ft[0];
+        var apiScore2 = apiMatch.score.ft[1];
         if (localMatch.s1 !== apiScore1 || localMatch.s2 !== apiScore2) {
           updatedMatches.push({
             id: localMatch.id,
@@ -1436,36 +1492,26 @@ async function fetchMatchResults() {
     }
     
     if (updatedMatches.length === 0) {
-      showToast('Aucun nouveau résultat trouvé', 'info');
+      showToast(currentLang === 'fr' ? 'Aucun nouveau résultat' : 'No new results', 'info');
       return;
     }
-    
-    // Update matches in Grist
-    const actions = updatedMatches.map(m => [
-      'UpdateRecord', MATCHES_TABLE, m.id, 
-      { Score1: m.newScore1, Score2: m.newScore2 }
-    ]);
-    
-    await grist.docApi.applyUserActions(actions);
-    
-    // Update local data
-    updatedMatches.forEach(m => {
-      const localMatch = matches.find(mm => mm.id === m.id);
-      if (localMatch) {
-        localMatch.s1 = m.newScore1;
-        localMatch.s2 = m.newScore2;
-      }
+
+    var updateActions = updatedMatches.map(function(um) {
+      return ['UpdateRecord', MATCHES_TABLE, um.id, { Score1: um.newScore1, Score2: um.newScore2 }];
     });
-    
-    // Recalculate points for updated matches
-    for (const m of updatedMatches) {
-      await recalculatePointsForMatch(m.num, m.newScore1, m.newScore2);
+    await grist.docApi.applyUserActions(updateActions);
+
+    updatedMatches.forEach(function(um) {
+      var lm = matches.find(function(mm) { return mm.id === um.id; });
+      if (lm) { lm.s1 = um.newScore1; lm.s2 = um.newScore2; }
+    });
+
+    for (var ui = 0; ui < updatedMatches.length; ui++) {
+      await recalculatePointsForMatch(updatedMatches[ui].num, updatedMatches[ui].newScore1, updatedMatches[ui].newScore2);
     }
-    
-    // Refresh UI
+
     renderCurrentTab();
-    
-    showToast(`${updatedMatches.length} résultat(s) mis à jour ✓`, 'success');
+    showToast(updatedMatches.length + (currentLang === 'fr' ? ' résultat(s) mis à jour ✓' : ' result(s) updated ✓'), 'success');
     
   } catch (error) {
     console.error('Erreur lors de la récupération des résultats:', error);
@@ -1485,7 +1531,7 @@ if (!isInsideGrist()) {
     await grist.ready({ requiredAccess: 'full' });
     await detectRole();
     await ensureTables();
-    if (isOwner) { await seedTeams(); await seedMatches(); }
+    if (isOwner) { await seedTeams(); await seedMatches(); await applySecurityRules(); }
     await loadAllData();
     renderCurrentTab();
     // Ensure header is updated after everything is loaded
