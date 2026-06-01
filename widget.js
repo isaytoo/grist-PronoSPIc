@@ -592,18 +592,17 @@ function updateHeaderUserInfo() {
   }
 }
 
-// Avatar styles - styles supporting sex[] param: avataaars, adventurer
-// For male/female: all styles shown but sex[] applied to the URL
-// For neutral: all styles without sex restriction
+// Avatar styles per gender
+// Male: only avataaars with sex[]=male (reliable gendering)
+// Female: only lorelei (female by design, no sex param needed)
+// Neutral: mix of all styles without gender filter
 var avatarStyles = {
   male: [
-    { id: 'avataaars', name: 'Personnage Cartoon', description: 'Filtré masculin' },
-    { id: 'adventurer', name: 'Aventurier', description: 'Filtré masculin' }
+    { id: 'avataaars', name: 'Personnage Cartoon masculin', description: 'Personnage masculin' }
   ],
   female: [
-    { id: 'avataaars', name: 'Personnage Cartoon', description: 'Filtré féminin' },
-    { id: 'adventurer', name: 'Aventurière', description: 'Filtré féminin' },
-    { id: 'lorelei', name: 'Personnage Animé', description: 'Style féminin' }
+    { id: 'lorelei', name: 'Personnage Animé féminin', description: 'Personnage féminin' },
+    { id: 'avataaars', name: 'Personnage Cartoon féminin', description: 'Personnage féminin' }
   ],
   neutral: [
     { id: 'avataaars', name: 'Personnage Cartoon', description: 'Style classique' },
@@ -632,15 +631,27 @@ function generateMultipleAvatars(style, count = 6) {
   generatedAvatars = [];
   var timestamp = Date.now();
   
-  // Apply sex[] parameter based on current gender
-  var sex = currentGender === 'male' ? 'male' : (currentGender === 'female' ? 'female' : null);
+  // For male: use avataaars with sex[]=male (avataaars clearly gendered)
+  // For female: use lorelei (female by design) or avataaars with sex[]=female
+  // For neutral: use the selected style without sex filter
+  var effectiveStyle = style;
+  var sex = null;
+  
+  if (currentGender === 'male') {
+    effectiveStyle = 'avataaars';
+    sex = 'male';
+  } else if (currentGender === 'female') {
+    effectiveStyle = style === 'avataaars' ? 'avataaars' : 'lorelei';
+    sex = style === 'avataaars' ? 'female' : null;
+  }
+  // neutral: use selected style as-is, no sex param
   
   for (var i = 0; i < count; i++) {
     var uniqueSeed = currentUserEmail + '_' + currentGender + '_' + timestamp + '_' + i + '_' + Math.random().toString(36).substring(7);
     generatedAvatars.push({
-      url: generateAvatarUrl(style, uniqueSeed, sex),
+      url: generateAvatarUrl(effectiveStyle, uniqueSeed, sex),
       seed: uniqueSeed,
-      style: style
+      style: effectiveStyle
     });
   }
   return generatedAvatars;
