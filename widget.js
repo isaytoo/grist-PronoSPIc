@@ -508,22 +508,46 @@ function getAvatarUrl(email) {
 }
 
 function updateHeaderUserInfo() {
+  console.log('[PronoSPIc] updateHeaderUserInfo called');
+  console.log('[PronoSPIc] currentUserEmail:', currentUserEmail);
+  
   var userNameElement = document.getElementById('header-user-name');
   var avatarElement = document.getElementById('header-avatar');
   
-  if (!userNameElement || !avatarElement) return;
+  console.log('[PronoSPIc] Header elements found:', {
+    userNameElement: !!userNameElement,
+    avatarElement: !!avatarElement
+  });
+  
+  if (!userNameElement || !avatarElement) {
+    console.log('[PronoSPIc] Header elements not found, retrying...');
+    setTimeout(updateHeaderUserInfo, 200);
+    return;
+  }
   
   var displayName = getDisplayName(currentUserEmail);
   var avatarUrl = getAvatarUrl(currentUserEmail);
+  
+  console.log('[PronoSPIc] User info:', {
+    displayName: displayName,
+    avatarUrl: avatarUrl,
+    profilesCount: profiles.length
+  });
   
   // Update display name
   userNameElement.textContent = displayName;
   
   // Update avatar
   if (avatarUrl && avatarUrl.match(/^https?:\/\/.+/)) {
+    console.log('[PronoSPIc] Setting header avatar URL:', avatarUrl);
     avatarElement.src = avatarUrl;
     avatarElement.style.display = 'block';
+    avatarElement.onerror = function() {
+      console.log('[PronoSPIc] Header avatar failed to load:', avatarUrl);
+      this.style.display = 'none';
+    };
   } else {
+    console.log('[PronoSPIc] Hiding header avatar, invalid URL:', avatarUrl);
     avatarElement.style.display = 'none';
   }
 }
@@ -924,6 +948,7 @@ function renderProfile() {
   // Generate initial avatars after DOM is ready
   setTimeout(function() {
     generateNewAvatars();
+    updateHeaderUserInfo(); // Ensure header is updated when profile tab opens
   }, 100);
 }
 
@@ -976,6 +1001,16 @@ function selectGeneratedAvatar(avatarUrl) {
   console.log('[PronoSPIc] selectGeneratedAvatar called with:', avatarUrl);
   document.getElementById('profile-avatar-url').value = avatarUrl;
   updateAvatarPreview(avatarUrl);
+  
+  // Update header with the new avatar (preview)
+  var avatarElement = document.getElementById('header-avatar');
+  if (avatarElement) {
+    avatarElement.src = avatarUrl;
+    avatarElement.style.display = 'block';
+    avatarElement.onerror = function() {
+      this.style.display = 'none';
+    };
+  }
   
   // Visual feedback
   showToast('Avatar sélectionné !', 'success');
