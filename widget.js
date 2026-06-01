@@ -908,8 +908,14 @@ function renderLeaderboard() {
       var p = ranked.length >= 3 ? podiumOrder[pi] : ranked[pi];
       var cls = ranked.length >= 3 ? classes[pi] : classes[pi === 0 ? 1 : (pi === 1 ? 0 : 2)];
       var medal = ranked.length >= 3 ? medals[pi] : medals[pi === 0 ? 1 : (pi === 1 ? 0 : 2)];
+      var pAvatar = getAvatarUrl(p.email);
       html += '<div class="podium-item ' + cls + '">';
       html += '<div class="podium-rank">' + medal + '</div>';
+      if (pAvatar) {
+        html += '<img src="' + sanitize(pAvatar) + '" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #fff;margin-bottom:4px;">';
+      } else {
+        html += '<div style="width:48px;height:48px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 4px;">👤</div>';
+      }
       html += '<div class="podium-name">' + sanitize(getDisplayName(p.email)) + '</div>';
       html += '<div class="podium-points">' + p.total + ' ' + t('pts') + '</div>';
       html += '</div>';
@@ -921,9 +927,13 @@ function renderLeaderboard() {
   html += '<th>' + t('rank') + '</th><th>' + t('player') + '</th><th>' + t('exactCount') + '</th><th>' + t('goodCount') + '</th><th>' + t('totalPts') + '</th>';
   html += '</tr></thead><tbody>';
   ranked.forEach(function(p, i) {
-    html += '<tr>';
+    var rowAvatar = getAvatarUrl(p.email);
+    var avatarHtml = rowAvatar
+      ? '<img src="' + sanitize(rowAvatar) + '" style="width:28px;height:28px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px;">'
+      : '<span style="display:inline-block;width:28px;height:28px;border-radius:50%;background:#e2e8f0;text-align:center;line-height:28px;font-size:14px;vertical-align:middle;margin-right:6px;">👤</span>';
+    html += '<tr' + (p.email === currentUserEmail ? ' style="background:#f0f7ff;font-weight:600;"' : '') + '>';
     html += '<td class="lb-rank">' + (i + 1) + '</td>';
-    html += '<td>' + sanitize(getDisplayName(p.email)) + '</td>';
+    html += '<td>' + avatarHtml + sanitize(getDisplayName(p.email)) + '</td>';
     html += '<td>' + p.exact + '</td><td>' + p.good + '</td>';
     html += '<td class="lb-points">' + p.total + '</td>';
     html += '</tr>';
