@@ -395,11 +395,39 @@ async function ensureTables() {
     if (tables.indexOf(PROFILES_TABLE) === -1) {
       await grist.docApi.applyUserActions([['AddTable', PROFILES_TABLE, [
         { id: 'User_Email', type: 'Text' }, { id: 'Display_Name', type: 'Text' },
-        { id: 'Avatar_URL', type: 'Text' }
+        { id: 'Avatar_URL', type: 'Text' }, { id: 'Gender', type: 'Text' }
       ]]]);
+    } else {
+      // Ensure Gender column exists in existing PROFILES_TABLE
+      await ensureGenderColumn();
     }
   } catch (e) {
     console.warn('[PronoSPIc] ensureTables error:', e.message);
+  }
+}
+
+async function ensureGenderColumn() {
+  try {
+    console.log('[PronoSPIc] Checking for Gender column in PROFILES_TABLE');
+    var tableInfo = await grist.docApi.fetchTable(PROFILES_TABLE);
+    
+    // Check if Gender column exists by looking at the column structure
+    var hasGenderColumn = false;
+    if (tableInfo && tableInfo.columns) {
+      hasGenderColumn = Object.keys(tableInfo.columns).includes('Gender');
+    }
+    
+    if (!hasGenderColumn) {
+      console.log('[PronoSPIc] Adding Gender column to PROFILES_TABLE');
+      await grist.docApi.applyUserActions([['AddColumn', PROFILES_TABLE, 'Gender', {
+        type: 'Text'
+      }]]);
+      console.log('[PronoSPIc] Gender column added successfully');
+    } else {
+      console.log('[PronoSPIc] Gender column already exists');
+    }
+  } catch (e) {
+    console.log('[PronoSPIc] Error checking/adding Gender column:', e);
   }
 }
 
