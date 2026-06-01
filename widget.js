@@ -28,6 +28,8 @@ var i18n = {
     bonusSave: 'Enregistrer mes bonus', bonusSaved: 'Bonus enregistrés ✓',
     profileTitle: 'Mon Profil', profileName: 'Nom d\'affichage', profileSave: 'Enregistrer mon profil',
     profileSaved: 'Profil enregistré ✓', profileAvatar: 'URL de l\'avatar (optionnel)',
+    avatarGenerator: 'Générateur d\'avatar', avatarStyle: 'Style', avatarGenerate: 'Générer un avatar',
+    avatarUseGenerated: 'Utiliser cet avatar', avatarRandom: 'Aléatoire', avatarCustom: 'URL personnalisée',
     tbd: 'À déterminer', matchNumber: 'Match', vs: '-',
     group: 'Groupe', noPronosYet: 'Tu n\'as pas encore pronostiqué'
   },
@@ -48,6 +50,8 @@ var i18n = {
     bonusSave: 'Save bonus', bonusSaved: 'Bonus saved ✓',
     profileTitle: 'My Profile', profileName: 'Display Name', profileSave: 'Save Profile',
     profileSaved: 'Profile saved ✓', profileAvatar: 'Avatar URL (optional)',
+    avatarGenerator: 'Avatar Generator', avatarStyle: 'Style', avatarGenerate: 'Generate Avatar',
+    avatarUseGenerated: 'Use this avatar', avatarRandom: 'Random', avatarCustom: 'Custom URL',
     tbd: 'TBD', matchNumber: 'Match', vs: '-',
     group: 'Group', noPronosYet: 'No predictions yet'
   }
@@ -500,6 +504,37 @@ function getAvatarUrl(email) {
   return profile ? profile.avatarUrl : '';
 }
 
+// Avatar generator functions
+var avatarStyles = [
+  { id: 'avataaars', name: 'Personnage Cartoon', description: 'Avatar de personne stylisé' },
+  { id: 'bottts', name: 'Robot', description: 'Avatar robotique moderne' },
+  { id: 'lorelei', name: 'Personnage Animé', description: 'Style manga/anime' },
+  { id: 'notionists', name: 'Professionnel', description: 'Style professionnel minimaliste' },
+  { id: 'adventurer', name: 'Aventurier', description: 'Style aventure et exploration' },
+  { id: 'identicon', name: 'Géométrique', description: 'Formes géométriques colorées' },
+  { id: 'shapes', name: 'Formes', description: 'Formes abstraites' },
+  { id: 'pixel-art', name: 'Pixel Art', description: 'Style rétro 8-bits' }
+];
+
+var currentAvatarStyle = 'avataaars';
+var generatedAvatars = [];
+
+function generateAvatarUrl(style, seed) {
+  if (!seed) seed = Math.random().toString(36).substring(7);
+  return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
+}
+
+function generateMultipleAvatars(style, count = 6) {
+  generatedAvatars = [];
+  for (var i = 0; i < count; i++) {
+    generatedAvatars.push({
+      url: generateAvatarUrl(style, currentUserEmail + '_' + i),
+      seed: currentUserEmail + '_' + i
+    });
+  }
+  return generatedAvatars;
+}
+
 // =============================================================================
 // RENDER: MATCHES
 // =============================================================================
@@ -791,10 +826,11 @@ function renderProfile() {
   var currentDisplayName = myProfile ? myProfile.displayName : '';
   var currentAvatar = myProfile ? myProfile.avatarUrl : '';
   
-  var html = '<div style="max-width: 500px; margin: 0 auto;">';
+  var html = '<div style="max-width: 600px; margin: 0 auto;">';
   html += '<h2 style="margin-bottom: 20px; text-align: center;">' + t('profileTitle') + '</h2>';
   
-  html += '<div style="background: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">';
+  // Profile form
+  html += '<div style="background: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px;">';
   
   // Avatar preview
   html += '<div style="text-align: center; margin-bottom: 20px;">';
@@ -813,25 +849,51 @@ function renderProfile() {
   html += 'style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; outline: none;">';
   html += '</div>';
   
-  html += '<div style="margin-bottom: 20px;">';
-  html += '<label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151;">' + t('profileAvatar') + '</label>';
+  html += '<button class="btn-prono" onclick="saveProfile()" style="width: 100%;">' + t('profileSave') + '</button>';
+  html += '</div>';
+  
+  // Avatar Generator
+  html += '<div style="background: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px;">';
+  html += '<h3 style="margin-bottom: 16px; text-align: center;">' + t('avatarGenerator') + '</h3>';
+  
+  // Style selector
+  html += '<div style="margin-bottom: 16px;">';
+  html += '<label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151;">' + t('avatarStyle') + '</label>';
+  html += '<select id="avatar-style-select" onchange="changeAvatarStyle(this.value)" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; outline: none;">';
+  avatarStyles.forEach(function(style) {
+    html += '<option value="' + style.id + '">' + style.name + ' - ' + style.description + '</option>';
+  });
+  html += '</select>';
+  html += '</div>';
+  
+  html += '<button class="btn-prono" onclick="generateNewAvatars()" style="width: 100%; margin-bottom: 16px;">' + t('avatarGenerate') + '</button>';
+  
+  // Avatar grid
+  html += '<div id="avatar-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px;">';
+  html += '</div>';
+  
+  html += '</div>';
+  
+  // Custom URL
+  html += '<div style="background: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px;">';
+  html += '<h4 style="margin-bottom: 12px;">' + t('avatarCustom') + '</h4>';
   html += '<input type="url" id="profile-avatar-url" value="' + sanitize(currentAvatar) + '" ';
   html += 'placeholder="https://..." ';
   html += 'style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; outline: none;" ';
   html += 'oninput="updateAvatarPreview(this.value)">';
   html += '</div>';
   
-  html += '<button class="btn-prono" onclick="saveProfile()" style="width: 100%;">' + t('profileSave') + '</button>';
-  html += '</div>';
-  
   // Info section
-  html += '<div style="margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 12px; font-size: 13px; color: #64748b;">';
+  html += '<div style="padding: 16px; background: #f8fafc; border-radius: 12px; font-size: 13px; color: #64748b;">';
   html += '<div style="margin-bottom: 8px;"><strong>Email:</strong> ' + sanitize(currentUserEmail) + '</div>';
   html += '<div><strong>Nom affiché:</strong> ' + sanitize(currentDisplayName || currentUserEmail.split('@')[0]) + '</div>';
   html += '</div>';
   
   html += '</div>';
   container.innerHTML = html;
+  
+  // Generate initial avatars
+  generateNewAvatars();
 }
 
 function updateAvatarPreview(url) {
@@ -841,6 +903,38 @@ function updateAvatarPreview(url) {
   } else {
     preview.outerHTML = '<div id="avatar-preview" style="width: 80px; height: 80px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 32px; color: #94a3b8; margin: 0 auto;">👤</div>';
   }
+}
+
+function changeAvatarStyle(style) {
+  currentAvatarStyle = style;
+  generateNewAvatars();
+}
+
+function generateNewAvatars() {
+  var avatars = generateMultipleAvatars(currentAvatarStyle, 6);
+  var grid = document.getElementById('avatar-grid');
+  if (!grid) return;
+  
+  var html = '';
+  avatars.forEach(function(avatar, index) {
+    html += '<div style="text-align: center; cursor: pointer; padding: 8px; border: 2px solid #e2e8f0; border-radius: 12px; transition: all 0.2s;" ';
+    html += 'onmouseover="this.style.borderColor=\'#7c1d4e\'; this.style.transform=\'scale(1.05)\'" ';
+    html += 'onmouseout="this.style.borderColor=\'#e2e8f0\'; this.style.transform=\'scale(1)\'" ';
+    html += 'onclick="selectGeneratedAvatar(\'' + sanitize(avatar.url) + '\')">';
+    html += '<img src="' + sanitize(avatar.url) + '" style="width: 60px; height: 60px; border-radius: 50%; margin-bottom: 4px;">';
+    html += '<div style="font-size: 10px; color: #94a3b8;">' + t('avatarUseGenerated') + '</div>';
+    html += '</div>';
+  });
+  
+  grid.innerHTML = html;
+}
+
+function selectGeneratedAvatar(avatarUrl) {
+  document.getElementById('profile-avatar-url').value = avatarUrl;
+  updateAvatarPreview(avatarUrl);
+  
+  // Visual feedback
+  showToast('Avatar sélectionné !', 'success');
 }
 
 async function saveProfile() {
