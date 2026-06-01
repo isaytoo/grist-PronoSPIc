@@ -934,8 +934,17 @@ function renderLeaderboard() {
 // =============================================================================
 
 function renderProfile() {
+  console.log('[PronoSPIc] renderProfile called');
+  console.log('[PronoSPIc] currentUserEmail:', currentUserEmail);
+  console.log('[PronoSPIc] profiles:', profiles);
+  
   var container = document.getElementById('profile-content');
   var myProfile = profiles.find(function(p) { return p.email === currentUserEmail; });
+  
+  console.log('[PronoSPIc] myProfile found:', !!myProfile);
+  if (myProfile) {
+    console.log('[PronoSPIc] myProfile data:', myProfile);
+  }
   
   var currentDisplayName = myProfile ? myProfile.displayName : '';
   var currentAvatar = myProfile ? myProfile.avatarUrl : '';
@@ -943,9 +952,13 @@ function renderProfile() {
   // Load gender from profile or use default
   if (myProfile && myProfile.gender) {
     currentGender = myProfile.gender;
+    console.log('[PronoSPIc] Loaded gender from profile:', currentGender);
   } else {
     currentGender = 'neutral';
+    console.log('[PronoSPIc] Using default gender:', currentGender);
   }
+  
+  console.log('[PronoSPIc] Final currentGender:', currentGender);
   
   var html = '<div style="max-width: 600px; margin: 0 auto;">';
   html += '<h2 style="margin-bottom: 20px; text-align: center;">' + t('profileTitle') + '</h2>';
