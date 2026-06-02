@@ -14,7 +14,7 @@ var i18n = {
   fr: {
     subtitle: 'Pronostics Coupe du Monde 2026',
     tabMatches: 'Matchs', tabGroups: 'Groupes', tabLeaderboard: 'Classement', tabMyStats: 'Mes Stats', tabProfile: 'Mon Profil',
-    allMatches: 'Tous', groupStage: 'Poules', roundOf32: '1/16', quarterFinals: '1/4', semiFinals: '1/2', thirdPlace: '3e place', final: 'Finale',
+    allMatches: 'Tous', groupStage: 'Poules', roundOf32: '1/16', roundOf16: '1/8', quarterFinals: '1/4', semiFinals: '1/2', thirdPlace: '3e place', final: 'Finale',
     today: "Aujourd'hui", tomorrow: 'Demain', all: 'Tous',
     saveProno: 'Valider', saved: 'Validé ✓', noMatches: 'Aucun match',
     pts: 'pts', exact: 'Exact !', goodResult: 'Bon résultat', wrong: 'Raté', pending: 'En attente',
@@ -39,7 +39,7 @@ var i18n = {
   en: {
     subtitle: 'World Cup 2026 Predictions',
     tabMatches: 'Matches', tabGroups: 'Groups', tabLeaderboard: 'Leaderboard', tabMyStats: 'My Stats', tabProfile: 'My Profile',
-    allMatches: 'All', groupStage: 'Groups', roundOf32: 'R16', quarterFinals: 'QF', semiFinals: 'SF', thirdPlace: '3rd', final: 'Final',
+    allMatches: 'All', groupStage: 'Groups', roundOf32: 'R32', roundOf16: 'R16', quarterFinals: 'QF', semiFinals: 'SF', thirdPlace: '3rd', final: 'Final',
     today: 'Today', tomorrow: 'Tomorrow', all: 'All',
     saveProno: 'Submit', saved: 'Saved ✓', noMatches: 'No matches',
     pts: 'pts', exact: 'Exact!', goodResult: 'Good result', wrong: 'Wrong', pending: 'Pending',
@@ -161,120 +161,131 @@ var TEAM_DATA = [
 // DATA: MATCHES (72 groupes + 24 knockout = 96 matchs)
 // =============================================================================
 
+
 var MATCH_DATA = [
-  // Group A
-  { num:  1, phase: 'group', group: 'A', t1: 'MEX', t2: 'RSA', date: '2026-06-11', time: '18:00', stadium: 'Estadio Azteca', city: 'Mexico City' },
-  { num:  2, phase: 'group', group: 'A', t1: 'KOR', t2: 'CZE', date: '2026-06-11', time: '21:00', stadium: 'Estadio Akron', city: 'Guadalajara' },
-  { num:  3, phase: 'group', group: 'A', t1: 'RSA', t2: 'CZE', date: '2026-06-16', time: '18:00', stadium: 'Estadio Akron', city: 'Guadalajara' },
-  { num:  4, phase: 'group', group: 'A', t1: 'MEX', t2: 'KOR', date: '2026-06-17', time: '21:00', stadium: 'Estadio Azteca', city: 'Mexico City' },
-  { num:  5, phase: 'group', group: 'A', t1: 'CZE', t2: 'MEX', date: '2026-06-22', time: '18:00', stadium: 'Estadio BBVA', city: 'Monterrey' },
-  { num:  6, phase: 'group', group: 'A', t1: 'RSA', t2: 'KOR', date: '2026-06-22', time: '18:00', stadium: 'Estadio Azteca', city: 'Mexico City' },
-  // Group B
-  { num:  7, phase: 'group', group: 'B', t1: 'CAN', t2: 'BIH', date: '2026-06-12', time: '18:00', stadium: 'BMO Field', city: 'Toronto' },
-  { num:  8, phase: 'group', group: 'B', t1: 'QAT', t2: 'SUI', date: '2026-06-13', time: '15:00', stadium: 'Levi\'s Stadium', city: 'San Francisco' },
-  { num:  9, phase: 'group', group: 'B', t1: 'BIH', t2: 'QAT', date: '2026-06-18', time: '18:00', stadium: 'BMO Field', city: 'Toronto' },
-  { num: 10, phase: 'group', group: 'B', t1: 'SUI', t2: 'CAN', date: '2026-06-18', time: '15:00', stadium: 'Levi\'s Stadium', city: 'San Francisco' },
-  { num: 11, phase: 'group', group: 'B', t1: 'QAT', t2: 'CAN', date: '2026-06-23', time: '18:00', stadium: 'BMO Field', city: 'Toronto' },
-  { num: 12, phase: 'group', group: 'B', t1: 'BIH', t2: 'SUI', date: '2026-06-23', time: '18:00', stadium: 'Levi\'s Stadium', city: 'San Francisco' },
-  // Group C
-  { num: 13, phase: 'group', group: 'C', t1: 'BRA', t2: 'MAR', date: '2026-06-13', time: '18:00', stadium: 'MetLife Stadium', city: 'New York' },
-  { num: 14, phase: 'group', group: 'C', t1: 'HAI', t2: 'SCO', date: '2026-06-13', time: '21:00', stadium: 'Gillette Stadium', city: 'Boston' },
-  { num: 15, phase: 'group', group: 'C', t1: 'SCO', t2: 'BRA', date: '2026-06-19', time: '18:00', stadium: 'MetLife Stadium', city: 'New York' },
-  { num: 16, phase: 'group', group: 'C', t1: 'MAR', t2: 'HAI', date: '2026-06-19', time: '21:00', stadium: 'Gillette Stadium', city: 'Boston' },
-  { num: 17, phase: 'group', group: 'C', t1: 'BRA', t2: 'SCO', date: '2026-06-24', time: '18:00', stadium: 'MetLife Stadium', city: 'New York' },
-  { num: 18, phase: 'group', group: 'C', t1: 'MAR', t2: 'HAI', date: '2026-06-24', time: '18:00', stadium: 'Gillette Stadium', city: 'Boston' },
-  // Group D
-  { num: 19, phase: 'group', group: 'D', t1: 'USA', t2: 'PAR', date: '2026-06-12', time: '21:00', stadium: 'SoFi Stadium', city: 'Los Angeles' },
-  { num: 20, phase: 'group', group: 'D', t1: 'AUS', t2: 'TUR', date: '2026-06-13', time: '12:00', stadium: 'Lumen Field', city: 'Seattle' },
-  { num: 21, phase: 'group', group: 'D', t1: 'USA', t2: 'AUS', date: '2026-06-19', time: '21:00', stadium: 'SoFi Stadium', city: 'Los Angeles' },
-  { num: 22, phase: 'group', group: 'D', t1: 'PAR', t2: 'TUR', date: '2026-06-19', time: '12:00', stadium: 'Lumen Field', city: 'Seattle' },
-  { num: 23, phase: 'group', group: 'D', t1: 'AUS', t2: 'PAR', date: '2026-06-24', time: '21:00', stadium: 'SoFi Stadium', city: 'Los Angeles' },
-  { num: 24, phase: 'group', group: 'D', t1: 'TUR', t2: 'USA', date: '2026-06-24', time: '21:00', stadium: 'Lumen Field', city: 'Seattle' },
-  // Group E
-  { num: 25, phase: 'group', group: 'E', t1: 'GER', t2: 'CUW', date: '2026-06-14', time: '21:00', stadium: 'NRG Stadium', city: 'Houston' },
-  { num: 26, phase: 'group', group: 'E', t1: 'CIV', t2: 'ECU', date: '2026-06-14', time: '18:00', stadium: 'AT&T Stadium', city: 'Dallas' },
-  { num: 27, phase: 'group', group: 'E', t1: 'GER', t2: 'ECU', date: '2026-06-20', time: '21:00', stadium: 'NRG Stadium', city: 'Houston' },
-  { num: 28, phase: 'group', group: 'E', t1: 'CUW', t2: 'CIV', date: '2026-06-20', time: '18:00', stadium: 'AT&T Stadium', city: 'Dallas' },
-  { num: 29, phase: 'group', group: 'E', t1: 'ECU', t2: 'GER', date: '2026-06-25', time: '21:00', stadium: 'NRG Stadium', city: 'Houston' },
-  { num: 30, phase: 'group', group: 'E', t1: 'CIV', t2: 'CUW', date: '2026-06-25', time: '21:00', stadium: 'AT&T Stadium', city: 'Dallas' },
-  // Group F
-  { num: 31, phase: 'group', group: 'F', t1: 'NED', t2: 'JPN', date: '2026-06-14', time: '18:00', stadium: 'AT&T Stadium', city: 'Dallas' },
-  { num: 32, phase: 'group', group: 'F', t1: 'SWE', t2: 'TUN', date: '2026-06-14', time: '15:00', stadium: 'Estadio BBVA', city: 'Monterrey' },
-  { num: 33, phase: 'group', group: 'F', t1: 'JPN', t2: 'SWE', date: '2026-06-20', time: '18:00', stadium: 'AT&T Stadium', city: 'Dallas' },
-  { num: 34, phase: 'group', group: 'F', t1: 'TUN', t2: 'NED', date: '2026-06-20', time: '15:00', stadium: 'Estadio BBVA', city: 'Monterrey' },
-  { num: 35, phase: 'group', group: 'F', t1: 'NED', t2: 'TUN', date: '2026-06-25', time: '18:00', stadium: 'AT&T Stadium', city: 'Dallas' },
-  { num: 36, phase: 'group', group: 'F', t1: 'SWE', t2: 'JPN', date: '2026-06-25', time: '18:00', stadium: 'Estadio BBVA', city: 'Monterrey' },
-  // Group G
-  { num: 37, phase: 'group', group: 'G', t1: 'BEL', t2: 'EGY', date: '2026-06-15', time: '21:00', stadium: 'Lumen Field', city: 'Seattle' },
-  { num: 38, phase: 'group', group: 'G', t1: 'IRN', t2: 'NZL', date: '2026-06-15', time: '18:00', stadium: 'SoFi Stadium', city: 'Los Angeles' },
-  { num: 39, phase: 'group', group: 'G', t1: 'EGY', t2: 'IRN', date: '2026-06-21', time: '21:00', stadium: 'Lumen Field', city: 'Seattle' },
-  { num: 40, phase: 'group', group: 'G', t1: 'NZL', t2: 'BEL', date: '2026-06-21', time: '18:00', stadium: 'SoFi Stadium', city: 'Los Angeles' },
-  { num: 41, phase: 'group', group: 'G', t1: 'BEL', t2: 'NZL', date: '2026-06-26', time: '21:00', stadium: 'Lumen Field', city: 'Seattle' },
-  { num: 42, phase: 'group', group: 'G', t1: 'EGY', t2: 'IRN', date: '2026-06-26', time: '21:00', stadium: 'SoFi Stadium', city: 'Los Angeles' },
-  // Group H
-  { num: 43, phase: 'group', group: 'H', t1: 'ESP', t2: 'CPV', date: '2026-06-15', time: '18:00', stadium: 'Mercedes-Benz Stadium', city: 'Atlanta' },
-  { num: 44, phase: 'group', group: 'H', t1: 'KSA', t2: 'URU', date: '2026-06-15', time: '15:00', stadium: 'Hard Rock Stadium', city: 'Miami' },
-  { num: 45, phase: 'group', group: 'H', t1: 'CPV', t2: 'KSA', date: '2026-06-21', time: '18:00', stadium: 'Mercedes-Benz Stadium', city: 'Atlanta' },
-  { num: 46, phase: 'group', group: 'H', t1: 'URU', t2: 'ESP', date: '2026-06-21', time: '15:00', stadium: 'Hard Rock Stadium', city: 'Miami' },
-  { num: 47, phase: 'group', group: 'H', t1: 'ESP', t2: 'URU', date: '2026-06-26', time: '18:00', stadium: 'Mercedes-Benz Stadium', city: 'Atlanta' },
-  { num: 48, phase: 'group', group: 'H', t1: 'CPV', t2: 'KSA', date: '2026-06-26', time: '18:00', stadium: 'Hard Rock Stadium', city: 'Miami' },
-  // Group I
-  { num: 49, phase: 'group', group: 'I', t1: 'FRA', t2: 'SEN', date: '2026-06-16', time: '21:00', stadium: 'MetLife Stadium', city: 'New York' },
-  { num: 50, phase: 'group', group: 'I', t1: 'IRQ', t2: 'NOR', date: '2026-06-16', time: '18:00', stadium: 'Gillette Stadium', city: 'Boston' },
-  { num: 51, phase: 'group', group: 'I', t1: 'NOR', t2: 'FRA', date: '2026-06-22', time: '21:00', stadium: 'MetLife Stadium', city: 'New York' },
-  { num: 52, phase: 'group', group: 'I', t1: 'SEN', t2: 'IRQ', date: '2026-06-22', time: '18:00', stadium: 'Gillette Stadium', city: 'Boston' },
-  { num: 53, phase: 'group', group: 'I', t1: 'FRA', t2: 'IRQ', date: '2026-06-27', time: '21:00', stadium: 'MetLife Stadium', city: 'New York' },
-  { num: 54, phase: 'group', group: 'I', t1: 'SEN', t2: 'NOR', date: '2026-06-27', time: '21:00', stadium: 'Gillette Stadium', city: 'Boston' },
-  // Group J
-  { num: 55, phase: 'group', group: 'J', t1: 'ARG', t2: 'ALG', date: '2026-06-16', time: '21:00', stadium: 'Arrowhead Stadium', city: 'Kansas City' },
-  { num: 56, phase: 'group', group: 'J', t1: 'AUT', t2: 'JOR', date: '2026-06-16', time: '18:00', stadium: 'Levi\'s Stadium', city: 'San Francisco' },
-  { num: 57, phase: 'group', group: 'J', t1: 'ALG', t2: 'AUT', date: '2026-06-22', time: '21:00', stadium: 'Arrowhead Stadium', city: 'Kansas City' },
-  { num: 58, phase: 'group', group: 'J', t1: 'JOR', t2: 'ARG', date: '2026-06-22', time: '18:00', stadium: 'Levi\'s Stadium', city: 'San Francisco' },
-  { num: 59, phase: 'group', group: 'J', t1: 'ARG', t2: 'JOR', date: '2026-06-27', time: '21:00', stadium: 'Arrowhead Stadium', city: 'Kansas City' },
-  { num: 60, phase: 'group', group: 'J', t1: 'ALG', t2: 'AUT', date: '2026-06-27', time: '21:00', stadium: 'Levi\'s Stadium', city: 'San Francisco' },
-  // Group K
-  { num: 61, phase: 'group', group: 'K', t1: 'POR', t2: 'COD', date: '2026-06-17', time: '21:00', stadium: 'NRG Stadium', city: 'Houston' },
-  { num: 62, phase: 'group', group: 'K', t1: 'UZB', t2: 'COL', date: '2026-06-17', time: '18:00', stadium: 'Estadio Azteca', city: 'Mexico City' },
-  { num: 63, phase: 'group', group: 'K', t1: 'COD', t2: 'UZB', date: '2026-06-23', time: '21:00', stadium: 'NRG Stadium', city: 'Houston' },
-  { num: 64, phase: 'group', group: 'K', t1: 'COL', t2: 'POR', date: '2026-06-23', time: '18:00', stadium: 'Estadio Azteca', city: 'Mexico City' },
-  { num: 65, phase: 'group', group: 'K', t1: 'POR', t2: 'UZB', date: '2026-06-28', time: '21:00', stadium: 'NRG Stadium', city: 'Houston' },
-  { num: 66, phase: 'group', group: 'K', t1: 'COL', t2: 'COD', date: '2026-06-28', time: '21:00', stadium: 'Estadio Azteca', city: 'Mexico City' },
-  // Group L
-  { num: 67, phase: 'group', group: 'L', t1: 'ENG', t2: 'CRO', date: '2026-06-17', time: '18:00', stadium: 'AT&T Stadium', city: 'Dallas' },
-  { num: 68, phase: 'group', group: 'L', t1: 'GHA', t2: 'PAN', date: '2026-06-17', time: '15:00', stadium: 'BMO Field', city: 'Toronto' },
-  { num: 69, phase: 'group', group: 'L', t1: 'CRO', t2: 'GHA', date: '2026-06-23', time: '18:00', stadium: 'AT&T Stadium', city: 'Dallas' },
-  { num: 70, phase: 'group', group: 'L', t1: 'PAN', t2: 'ENG', date: '2026-06-23', time: '15:00', stadium: 'BMO Field', city: 'Toronto' },
-  { num: 71, phase: 'group', group: 'L', t1: 'ENG', t2: 'PAN', date: '2026-06-28', time: '18:00', stadium: 'AT&T Stadium', city: 'Dallas' },
-  { num: 72, phase: 'group', group: 'L', t1: 'GHA', t2: 'CRO', date: '2026-06-28', time: '18:00', stadium: 'BMO Field', city: 'Toronto' },
-  // Knockout — Round of 32 (16 matchs)
-  { num: 73, phase: 'r32', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-01', time: '18:00', stadium: 'TBD', city: 'TBD' },
-  { num: 74, phase: 'r32', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-01', time: '21:00', stadium: 'TBD', city: 'TBD' },
-  { num: 75, phase: 'r32', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-02', time: '18:00', stadium: 'TBD', city: 'TBD' },
-  { num: 76, phase: 'r32', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-02', time: '21:00', stadium: 'TBD', city: 'TBD' },
-  { num: 77, phase: 'r32', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-03', time: '18:00', stadium: 'TBD', city: 'TBD' },
-  { num: 78, phase: 'r32', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-03', time: '21:00', stadium: 'TBD', city: 'TBD' },
-  { num: 79, phase: 'r32', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-04', time: '18:00', stadium: 'TBD', city: 'TBD' },
-  { num: 80, phase: 'r32', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-04', time: '21:00', stadium: 'TBD', city: 'TBD' },
-  { num: 81, phase: 'r32', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-05', time: '18:00', stadium: 'TBD', city: 'TBD' },
-  { num: 82, phase: 'r32', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-05', time: '21:00', stadium: 'TBD', city: 'TBD' },
-  { num: 83, phase: 'r32', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-06', time: '18:00', stadium: 'TBD', city: 'TBD' },
-  { num: 84, phase: 'r32', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-06', time: '21:00', stadium: 'TBD', city: 'TBD' },
-  { num: 85, phase: 'r32', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-07', time: '18:00', stadium: 'TBD', city: 'TBD' },
-  { num: 86, phase: 'r32', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-07', time: '21:00', stadium: 'TBD', city: 'TBD' },
-  { num: 87, phase: 'r32', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-08', time: '18:00', stadium: 'TBD', city: 'TBD' },
-  { num: 88, phase: 'r32', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-08', time: '21:00', stadium: 'TBD', city: 'TBD' },
-  // Quarter-finals
-  { num: 89, phase: 'qf', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-11', time: '18:00', stadium: 'TBD', city: 'TBD' },
-  { num: 90, phase: 'qf', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-11', time: '21:00', stadium: 'TBD', city: 'TBD' },
-  { num: 91, phase: 'qf', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-12', time: '18:00', stadium: 'TBD', city: 'TBD' },
-  { num: 92, phase: 'qf', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-12', time: '21:00', stadium: 'TBD', city: 'TBD' },
-  // Semi-finals
-  { num: 93, phase: 'sf', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-14', time: '21:00', stadium: 'TBD', city: 'TBD' },
-  { num: 94, phase: 'sf', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-15', time: '21:00', stadium: 'TBD', city: 'TBD' },
-  // 3rd place
-  { num: 95, phase: '3rd', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-18', time: '18:00', stadium: 'Hard Rock Stadium', city: 'Miami' },
-  // Final
-  { num: 96, phase: 'final', group: '',  t1: 'TBD', t2: 'TBD', date: '2026-07-19', time: '16:00', stadium: 'MetLife Stadium', city: 'New York' },];
+  // ── Groupe A (MEX, RSA, KOR, CZE) ──────────────────────────────────
+  { num: 1,  phase: 'group', group: 'A', t1: 'MEX', t2: 'RSA', date: '2026-06-11', time: '13:00', stadium: 'Estadio Azteca',        city: 'Mexico City'  },
+  { num: 2,  phase: 'group', group: 'A', t1: 'KOR', t2: 'CZE', date: '2026-06-11', time: '20:00', stadium: 'Estadio Akron',         city: 'Guadalajara'  },
+  { num: 3,  phase: 'group', group: 'A', t1: 'CZE', t2: 'RSA', date: '2026-06-18', time: '12:00', stadium: 'Mercedes-Benz Stadium', city: 'Atlanta'      },
+  { num: 4,  phase: 'group', group: 'A', t1: 'MEX', t2: 'KOR', date: '2026-06-18', time: '19:00', stadium: 'Estadio Akron',         city: 'Guadalajara'  },
+  { num: 5,  phase: 'group', group: 'A', t1: 'CZE', t2: 'MEX', date: '2026-06-24', time: '19:00', stadium: 'Estadio Azteca',        city: 'Mexico City'  },
+  { num: 6,  phase: 'group', group: 'A', t1: 'RSA', t2: 'KOR', date: '2026-06-24', time: '19:00', stadium: 'Estadio BBVA',          city: 'Monterrey'    },
+  // ── Groupe B (CAN, BIH, QAT, SUI) ──────────────────────────────────
+  { num: 7,  phase: 'group', group: 'B', t1: 'CAN', t2: 'BIH', date: '2026-06-12', time: '15:00', stadium: 'BMO Field',             city: 'Toronto'      },
+  { num: 8,  phase: 'group', group: 'B', t1: 'QAT', t2: 'SUI', date: '2026-06-13', time: '12:00', stadium: "Levi's Stadium",        city: 'San Francisco'},
+  { num: 9,  phase: 'group', group: 'B', t1: 'SUI', t2: 'BIH', date: '2026-06-18', time: '12:00', stadium: 'SoFi Stadium',          city: 'Los Angeles'  },
+  { num: 10, phase: 'group', group: 'B', t1: 'CAN', t2: 'QAT', date: '2026-06-18', time: '15:00', stadium: 'BC Place',              city: 'Vancouver'    },
+  { num: 11, phase: 'group', group: 'B', t1: 'SUI', t2: 'CAN', date: '2026-06-24', time: '12:00', stadium: 'BC Place',              city: 'Vancouver'    },
+  { num: 12, phase: 'group', group: 'B', t1: 'BIH', t2: 'QAT', date: '2026-06-24', time: '12:00', stadium: 'Lumen Field',           city: 'Seattle'      },
+  // ── Groupe C (BRA, MAR, HAI, SCO) ──────────────────────────────────
+  { num: 13, phase: 'group', group: 'C', t1: 'BRA', t2: 'MAR', date: '2026-06-13', time: '18:00', stadium: 'MetLife Stadium',       city: 'New York'     },
+  { num: 14, phase: 'group', group: 'C', t1: 'HAI', t2: 'SCO', date: '2026-06-13', time: '21:00', stadium: 'Gillette Stadium',      city: 'Boston'       },
+  { num: 15, phase: 'group', group: 'C', t1: 'SCO', t2: 'MAR', date: '2026-06-19', time: '18:00', stadium: 'Gillette Stadium',      city: 'Boston'       },
+  { num: 16, phase: 'group', group: 'C', t1: 'BRA', t2: 'HAI', date: '2026-06-19', time: '20:30', stadium: 'Lincoln Financial Field', city: 'Philadelphia'},
+  { num: 17, phase: 'group', group: 'C', t1: 'SCO', t2: 'BRA', date: '2026-06-24', time: '18:00', stadium: 'Hard Rock Stadium',     city: 'Miami'        },
+  { num: 18, phase: 'group', group: 'C', t1: 'MAR', t2: 'HAI', date: '2026-06-24', time: '18:00', stadium: 'Mercedes-Benz Stadium', city: 'Atlanta'      },
+  // ── Groupe D (USA, PAR, AUS, TUR) ──────────────────────────────────
+  { num: 19, phase: 'group', group: 'D', t1: 'USA', t2: 'PAR', date: '2026-06-12', time: '21:00', stadium: 'SoFi Stadium',          city: 'Los Angeles'  },
+  { num: 20, phase: 'group', group: 'D', t1: 'AUS', t2: 'TUR', date: '2026-06-13', time: '00:00', stadium: 'BC Place',              city: 'Vancouver'    },
+  { num: 21, phase: 'group', group: 'D', t1: 'USA', t2: 'AUS', date: '2026-06-19', time: '15:00', stadium: 'Lumen Field',           city: 'Seattle'      },
+  { num: 22, phase: 'group', group: 'D', t1: 'TUR', t2: 'PAR', date: '2026-06-19', time: '23:00', stadium: "Levi's Stadium",        city: 'San Francisco'},
+  { num: 23, phase: 'group', group: 'D', t1: 'TUR', t2: 'USA', date: '2026-06-25', time: '22:00', stadium: 'SoFi Stadium',          city: 'Los Angeles'  },
+  { num: 24, phase: 'group', group: 'D', t1: 'PAR', t2: 'AUS', date: '2026-06-25', time: '22:00', stadium: "Levi's Stadium",        city: 'San Francisco'},
+  // ── Groupe E (GER, CUW, CIV, ECU) ──────────────────────────────────
+  { num: 25, phase: 'group', group: 'E', t1: 'GER', t2: 'CUW', date: '2026-06-14', time: '13:00', stadium: 'NRG Stadium',           city: 'Houston'      },
+  { num: 26, phase: 'group', group: 'E', t1: 'CIV', t2: 'ECU', date: '2026-06-14', time: '19:00', stadium: 'Lincoln Financial Field', city: 'Philadelphia'},
+  { num: 27, phase: 'group', group: 'E', t1: 'GER', t2: 'CIV', date: '2026-06-20', time: '16:00', stadium: 'BMO Field',             city: 'Toronto'      },
+  { num: 28, phase: 'group', group: 'E', t1: 'ECU', t2: 'CUW', date: '2026-06-20', time: '20:00', stadium: 'Arrowhead Stadium',     city: 'Kansas City'  },
+  { num: 29, phase: 'group', group: 'E', t1: 'CUW', t2: 'CIV', date: '2026-06-25', time: '16:00', stadium: 'Lincoln Financial Field', city: 'Philadelphia'},
+  { num: 30, phase: 'group', group: 'E', t1: 'ECU', t2: 'GER', date: '2026-06-25', time: '16:00', stadium: 'MetLife Stadium',       city: 'New York'     },
+  // ── Groupe F (NED, JPN, SWE, TUN) ──────────────────────────────────
+  { num: 31, phase: 'group', group: 'F', t1: 'NED', t2: 'JPN', date: '2026-06-14', time: '16:00', stadium: "AT&T Stadium",          city: 'Dallas'       },
+  { num: 32, phase: 'group', group: 'F', t1: 'SWE', t2: 'TUN', date: '2026-06-14', time: '22:00', stadium: 'Estadio BBVA',          city: 'Monterrey'    },
+  { num: 33, phase: 'group', group: 'F', t1: 'NED', t2: 'SWE', date: '2026-06-20', time: '13:00', stadium: 'NRG Stadium',           city: 'Houston'      },
+  { num: 34, phase: 'group', group: 'F', t1: 'TUN', t2: 'JPN', date: '2026-06-20', time: '00:00', stadium: 'Estadio BBVA',          city: 'Monterrey'    },
+  { num: 35, phase: 'group', group: 'F', t1: 'JPN', t2: 'SWE', date: '2026-06-25', time: '19:00', stadium: "AT&T Stadium",          city: 'Dallas'       },
+  { num: 36, phase: 'group', group: 'F', t1: 'TUN', t2: 'NED', date: '2026-06-25', time: '19:00', stadium: 'Arrowhead Stadium',     city: 'Kansas City'  },
+  // ── Groupe G (BEL, EGY, IRN, NZL) ──────────────────────────────────
+  { num: 37, phase: 'group', group: 'G', t1: 'BEL', t2: 'EGY', date: '2026-06-15', time: '15:00', stadium: 'Lumen Field',           city: 'Seattle'      },
+  { num: 38, phase: 'group', group: 'G', t1: 'IRN', t2: 'NZL', date: '2026-06-15', time: '21:00', stadium: 'SoFi Stadium',          city: 'Los Angeles'  },
+  { num: 39, phase: 'group', group: 'G', t1: 'BEL', t2: 'IRN', date: '2026-06-21', time: '15:00', stadium: 'SoFi Stadium',          city: 'Los Angeles'  },
+  { num: 40, phase: 'group', group: 'G', t1: 'NZL', t2: 'EGY', date: '2026-06-21', time: '21:00', stadium: 'BC Place',              city: 'Vancouver'    },
+  { num: 41, phase: 'group', group: 'G', t1: 'EGY', t2: 'IRN', date: '2026-06-26', time: '23:00', stadium: 'Lumen Field',           city: 'Seattle'      },
+  { num: 42, phase: 'group', group: 'G', t1: 'NZL', t2: 'BEL', date: '2026-06-26', time: '23:00', stadium: 'BC Place',              city: 'Vancouver'    },
+  // ── Groupe H (ESP, CPV, KSA, URU) ──────────────────────────────────
+  { num: 43, phase: 'group', group: 'H', t1: 'ESP', t2: 'CPV', date: '2026-06-15', time: '12:00', stadium: 'Mercedes-Benz Stadium', city: 'Atlanta'      },
+  { num: 44, phase: 'group', group: 'H', t1: 'KSA', t2: 'URU', date: '2026-06-15', time: '18:00', stadium: 'Hard Rock Stadium',     city: 'Miami'        },
+  { num: 45, phase: 'group', group: 'H', t1: 'ESP', t2: 'KSA', date: '2026-06-21', time: '12:00', stadium: 'Mercedes-Benz Stadium', city: 'Atlanta'      },
+  { num: 46, phase: 'group', group: 'H', t1: 'URU', t2: 'CPV', date: '2026-06-21', time: '18:00', stadium: 'Hard Rock Stadium',     city: 'Miami'        },
+  { num: 47, phase: 'group', group: 'H', t1: 'CPV', t2: 'KSA', date: '2026-06-26', time: '20:00', stadium: 'NRG Stadium',           city: 'Houston'      },
+  { num: 48, phase: 'group', group: 'H', t1: 'URU', t2: 'ESP', date: '2026-06-26', time: '20:00', stadium: 'Estadio Akron',         city: 'Guadalajara'  },
+  // ── Groupe I (FRA, SEN, IRQ, NOR) ──────────────────────────────────
+  { num: 49, phase: 'group', group: 'I', t1: 'FRA', t2: 'SEN', date: '2026-06-16', time: '15:00', stadium: 'MetLife Stadium',       city: 'New York'     },
+  { num: 50, phase: 'group', group: 'I', t1: 'IRQ', t2: 'NOR', date: '2026-06-16', time: '18:00', stadium: 'Gillette Stadium',      city: 'Boston'       },
+  { num: 51, phase: 'group', group: 'I', t1: 'FRA', t2: 'IRQ', date: '2026-06-22', time: '17:00', stadium: 'Lincoln Financial Field', city: 'Philadelphia'},
+  { num: 52, phase: 'group', group: 'I', t1: 'NOR', t2: 'SEN', date: '2026-06-22', time: '20:00', stadium: 'MetLife Stadium',       city: 'New York'     },
+  { num: 53, phase: 'group', group: 'I', t1: 'NOR', t2: 'FRA', date: '2026-06-26', time: '15:00', stadium: 'Gillette Stadium',      city: 'Boston'       },
+  { num: 54, phase: 'group', group: 'I', t1: 'SEN', t2: 'IRQ', date: '2026-06-26', time: '15:00', stadium: 'BMO Field',             city: 'Toronto'      },
+  // ── Groupe J (ARG, ALG, AUT, JOR) ──────────────────────────────────
+  { num: 55, phase: 'group', group: 'J', t1: 'ARG', t2: 'ALG', date: '2026-06-16', time: '21:00', stadium: 'Arrowhead Stadium',     city: 'Kansas City'  },
+  { num: 56, phase: 'group', group: 'J', t1: 'AUT', t2: 'JOR', date: '2026-06-16', time: '00:00', stadium: "Levi's Stadium",        city: 'San Francisco'},
+  { num: 57, phase: 'group', group: 'J', t1: 'ARG', t2: 'AUT', date: '2026-06-22', time: '13:00', stadium: "AT&T Stadium",          city: 'Dallas'       },
+  { num: 58, phase: 'group', group: 'J', t1: 'JOR', t2: 'ALG', date: '2026-06-22', time: '23:00', stadium: "Levi's Stadium",        city: 'San Francisco'},
+  { num: 59, phase: 'group', group: 'J', t1: 'JOR', t2: 'ARG', date: '2026-06-27', time: '22:00', stadium: "AT&T Stadium",          city: 'Dallas'       },
+  { num: 60, phase: 'group', group: 'J', t1: 'ALG', t2: 'AUT', date: '2026-06-27', time: '22:00', stadium: 'Arrowhead Stadium',     city: 'Kansas City'  },
+  // ── Groupe K (POR, COD, UZB, COL) ──────────────────────────────────
+  { num: 61, phase: 'group', group: 'K', t1: 'POR', t2: 'COD', date: '2026-06-17', time: '13:00', stadium: 'NRG Stadium',           city: 'Houston'      },
+  { num: 62, phase: 'group', group: 'K', t1: 'UZB', t2: 'COL', date: '2026-06-17', time: '22:00', stadium: 'Estadio Azteca',        city: 'Mexico City'  },
+  { num: 63, phase: 'group', group: 'K', t1: 'POR', t2: 'UZB', date: '2026-06-23', time: '13:00', stadium: 'NRG Stadium',           city: 'Houston'      },
+  { num: 64, phase: 'group', group: 'K', t1: 'COL', t2: 'COD', date: '2026-06-23', time: '22:00', stadium: 'Estadio Akron',         city: 'Guadalajara'  },
+  { num: 65, phase: 'group', group: 'K', t1: 'COL', t2: 'POR', date: '2026-06-27', time: '19:30', stadium: 'Hard Rock Stadium',     city: 'Miami'        },
+  { num: 66, phase: 'group', group: 'K', t1: 'COD', t2: 'UZB', date: '2026-06-27', time: '19:30', stadium: 'Mercedes-Benz Stadium', city: 'Atlanta'      },
+  // ── Groupe L (ENG, CRO, GHA, PAN) ──────────────────────────────────
+  { num: 67, phase: 'group', group: 'L', t1: 'ENG', t2: 'CRO', date: '2026-06-17', time: '16:00', stadium: "AT&T Stadium",          city: 'Dallas'       },
+  { num: 68, phase: 'group', group: 'L', t1: 'GHA', t2: 'PAN', date: '2026-06-17', time: '19:00', stadium: 'BMO Field',             city: 'Toronto'      },
+  { num: 69, phase: 'group', group: 'L', t1: 'ENG', t2: 'GHA', date: '2026-06-23', time: '16:00', stadium: 'Gillette Stadium',      city: 'Boston'       },
+  { num: 70, phase: 'group', group: 'L', t1: 'PAN', t2: 'CRO', date: '2026-06-23', time: '19:00', stadium: 'BMO Field',             city: 'Toronto'      },
+  { num: 71, phase: 'group', group: 'L', t1: 'PAN', t2: 'ENG', date: '2026-06-27', time: '17:00', stadium: 'MetLife Stadium',       city: 'New York'     },
+  { num: 72, phase: 'group', group: 'L', t1: 'CRO', t2: 'GHA', date: '2026-06-27', time: '17:00', stadium: 'Lincoln Financial Field', city: 'Philadelphia'},
+  // ── Round of 32 (16 matchs, 28 juin – 3 juillet) ───────────────────
+  { num: 73,  phase: 'r32', group: '', t1: 'TBD', t2: 'TBD', date: '2026-06-28', time: '15:00', stadium: 'SoFi Stadium',          city: 'Los Angeles'  },
+  { num: 74,  phase: 'r32', group: '', t1: 'TBD', t2: 'TBD', date: '2026-06-29', time: '16:30', stadium: 'Gillette Stadium',      city: 'Boston'       },
+  { num: 75,  phase: 'r32', group: '', t1: 'TBD', t2: 'TBD', date: '2026-06-29', time: '21:00', stadium: 'Estadio BBVA',          city: 'Monterrey'    },
+  { num: 76,  phase: 'r32', group: '', t1: 'TBD', t2: 'TBD', date: '2026-06-29', time: '13:00', stadium: 'NRG Stadium',           city: 'Houston'      },
+  { num: 77,  phase: 'r32', group: '', t1: 'TBD', t2: 'TBD', date: '2026-06-30', time: '17:00', stadium: 'MetLife Stadium',       city: 'New York'     },
+  { num: 78,  phase: 'r32', group: '', t1: 'TBD', t2: 'TBD', date: '2026-06-30', time: '13:00', stadium: "AT&T Stadium",          city: 'Dallas'       },
+  { num: 79,  phase: 'r32', group: '', t1: 'TBD', t2: 'TBD', date: '2026-06-30', time: '21:00', stadium: 'Estadio Azteca',        city: 'Mexico City'  },
+  { num: 80,  phase: 'r32', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-01', time: '12:00', stadium: 'Mercedes-Benz Stadium', city: 'Atlanta'      },
+  { num: 81,  phase: 'r32', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-01', time: '20:00', stadium: "Levi's Stadium",        city: 'San Francisco'},
+  { num: 82,  phase: 'r32', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-01', time: '16:00', stadium: 'Lumen Field',           city: 'Seattle'      },
+  { num: 83,  phase: 'r32', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-02', time: '19:00', stadium: 'BMO Field',             city: 'Toronto'      },
+  { num: 84,  phase: 'r32', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-02', time: '15:00', stadium: 'SoFi Stadium',          city: 'Los Angeles'  },
+  { num: 85,  phase: 'r32', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-02', time: '23:00', stadium: 'BC Place',              city: 'Vancouver'    },
+  { num: 86,  phase: 'r32', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-03', time: '18:00', stadium: 'Hard Rock Stadium',     city: 'Miami'        },
+  { num: 87,  phase: 'r32', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-03', time: '20:30', stadium: 'Arrowhead Stadium',     city: 'Kansas City'  },
+  { num: 88,  phase: 'r32', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-03', time: '14:00', stadium: "AT&T Stadium",          city: 'Dallas'       },
+  // ── Round of 16 (8 matchs, 4–7 juillet) ────────────────────────────
+  { num: 89,  phase: 'r16', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-04', time: '17:00', stadium: 'Lincoln Financial Field', city: 'Philadelphia'},
+  { num: 90,  phase: 'r16', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-04', time: '13:00', stadium: 'NRG Stadium',           city: 'Houston'      },
+  { num: 91,  phase: 'r16', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-05', time: '16:00', stadium: 'MetLife Stadium',       city: 'New York'     },
+  { num: 92,  phase: 'r16', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-05', time: '20:00', stadium: 'Estadio Azteca',        city: 'Mexico City'  },
+  { num: 93,  phase: 'r16', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-06', time: '15:00', stadium: "AT&T Stadium",          city: 'Dallas'       },
+  { num: 94,  phase: 'r16', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-06', time: '18:00', stadium: 'Lumen Field',           city: 'Seattle'      },
+  { num: 95,  phase: 'r16', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-07', time: '12:00', stadium: 'Mercedes-Benz Stadium', city: 'Atlanta'      },
+  { num: 96,  phase: 'r16', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-07', time: '16:00', stadium: 'BC Place',              city: 'Vancouver'    },
+  // ── Quarts de finale (4 matchs) ────────────────────────────────────
+  { num: 97,  phase: 'qf', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-09', time: '16:00', stadium: 'Gillette Stadium',      city: 'Boston'       },
+  { num: 98,  phase: 'qf', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-10', time: '15:00', stadium: 'SoFi Stadium',          city: 'Los Angeles'  },
+  { num: 99,  phase: 'qf', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-11', time: '18:00', stadium: 'Hard Rock Stadium',     city: 'Miami'        },
+  { num: 100, phase: 'qf', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-11', time: '21:00', stadium: 'Arrowhead Stadium',     city: 'Kansas City'  },
+  // ── Demi-finales (2 matchs) ────────────────────────────────────────
+  { num: 101, phase: 'sf', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-14', time: '15:00', stadium: "AT&T Stadium",          city: 'Dallas'       },
+  { num: 102, phase: 'sf', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-15', time: '15:00', stadium: 'Mercedes-Benz Stadium', city: 'Atlanta'      },
+  // ── 3e place + Finale ──────────────────────────────────────────────
+  { num: 103, phase: '3rd',   group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-18', time: '17:00', stadium: 'Hard Rock Stadium',  city: 'Miami'        },
+  { num: 104, phase: 'final', group: '', t1: 'TBD', t2: 'TBD', date: '2026-07-19', time: '15:00', stadium: 'MetLife Stadium',     city: 'New York'     }
+];
+
 
 // =============================================================================
 // UTILS
@@ -296,12 +307,12 @@ function teamName(code) {
 }
 
 function phaseLabel(phase) {
-  var map = { group: 'groupStage', r32: 'roundOf32', qf: 'quarterFinals', sf: 'semiFinals', '3rd': 'thirdPlace', final: 'final' };
+  var map = { group: 'groupStage', r32: 'roundOf32', r16: 'roundOf16', qf: 'quarterFinals', sf: 'semiFinals', '3rd': 'thirdPlace', final: 'final' };
   return t(map[phase] || phase);
 }
 
 function phaseClass(phase) {
-  var map = { group: 'phase-group', r32: 'phase-r32', qf: 'phase-qf', sf: 'phase-sf', '3rd': 'phase-final', final: 'phase-final' };
+  var map = { group: 'phase-group', r32: 'phase-r32', r16: 'phase-r16', qf: 'phase-qf', sf: 'phase-sf', '3rd': 'phase-final', final: 'phase-final' };
   return map[phase] || 'phase-group';
 }
 
@@ -582,6 +593,7 @@ function renderMatchFilters() {
     { key: 'all',   label: t('allMatches') },
     { key: 'group', label: t('groupStage') },
     { key: 'r32',   label: t('roundOf32') },
+    { key: 'r16',   label: t('roundOf16') },
     { key: 'qf',    label: t('quarterFinals') },
     { key: 'sf',    label: t('semiFinals') },
     { key: '3rd',   label: t('thirdPlace') },
