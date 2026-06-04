@@ -165,6 +165,15 @@ var TEAM_DATA = [
 // DATA: MATCHES (72 groupes + 24 knockout = 96 matchs)
 // =============================================================================
 
+// Timezone offsets for each host city (summer time / daylight saving)
+// Format: offset from UTC in hours (negative = west of UTC)
+var CITY_TZ = {
+  'Mexico City': -5, 'Guadalajara': -5, 'Monterrey': -5,  // Mexico CDT (UTC-5)
+  'Toronto': -4, 'Vancouver': -7,                         // Canada EDT/PDT
+  'Atlanta': -4, 'Boston': -4, 'Miami': -4, 'New York': -4, 'Philadelphia': -4, // US EDT (UTC-4)
+  'Dallas': -5, 'Houston': -5, 'Kansas City': -5,         // US CDT (UTC-5)
+  'Los Angeles': -7, 'San Francisco': -7, 'Seattle': -7   // US PDT (UTC-7)
+};
 
 var MATCH_DATA = [
   // ── Groupe A (MEX, RSA, KOR, CZE) ──────────────────────────────────
@@ -326,20 +335,57 @@ function formatMatchDate(dateStr) {
   return d.toLocaleDateString(currentLang === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'short' });
 }
 
+/**
+ * Get the UTC Date object for a match kickoff time
+ * @param {Object} match - Match object with date, time, and city
+ * @returns {Date} UTC Date object
+ */
+function getMatchKickoffUTC(match) {
+  if (!match.date || !match.time) return null;
+  var cityOffset = CITY_TZ[match.city] || -5; // Default to CDT if city unknown
+  // Parse local time and convert to UTC
+  var localDate = new Date(match.date + 'T' + match.time + ':00');
+  // Add the city offset to get UTC (offset is negative, so we subtract)
+  return new Date(localDate.getTime() - cityOffset * 60 * 60 * 1000);
+}
+
+/**
+ * Format match time in user's local timezone
+ * @param {Object} match - Match object with date, time, and city
+ * @returns {string} Formatted time in user's locale (e.g., "20:00" or "8:00 PM")
+ */
+function formatMatchTime(match) {
+  var utcDate = getMatchKickoffUTC(match);
+  if (!utcDate) return match.time || '';
+  return utcDate.toLocaleTimeString(currentLang === 'fr' ? 'fr-FR' : 'en-US', { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * Format match date in user's local timezone (may differ from match.date if late night UTC)
+ * @param {Object} match - Match object
+ * @returns {string} Formatted date
+ */
+function formatMatchDateLocal(match) {
+  var utcDate = getMatchKickoffUTC(match);
+  if (!utcDate) return formatMatchDate(match.date);
+  return utcDate.toLocaleDateString(currentLang === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'short' });
+}
+
 // Minutes before kick-off when betting closes (configurable)
 var BETTING_LOCK_MINUTES = 15;
 
 /**
  * Check if betting is locked for a match (X minutes before kick-off)
- * @param {Object} match - Match object with date (YYYY-MM-DD) and time (HH:MM)
+ * Uses UTC time for accurate comparison across timezones
+ * @param {Object} match - Match object with date, time, and city
  * @returns {Object} { locked: boolean, minutesLeft: number|null }
  */
 function isMatchLocked(match) {
-  if (!match.date || !match.time) return { locked: false, minutesLeft: null };
+  var kickoffUTC = getMatchKickoffUTC(match);
+  if (!kickoffUTC) return { locked: false, minutesLeft: null };
   try {
-    var kickoff = new Date(match.date + 'T' + match.time + ':00');
     var now = new Date();
-    var diffMs = kickoff.getTime() - now.getTime();
+    var diffMs = kickoffUTC.getTime() - now.getTime();
     var diffMin = Math.floor(diffMs / 60000);
     if (diffMin <= BETTING_LOCK_MINUTES) {
       return { locked: true, minutesLeft: diffMin > 0 ? diffMin : 0 };
@@ -350,9 +396,9 @@ function isMatchLocked(match) {
   }
 }
 
-// Bonus deadline: first match of the tournament minus BETTING_LOCK_MINUTES
-// First match: 2026-06-11 13:00 (MEX vs RSA)
-var BONUS_DEADLINE = new Date('2026-06-11T13:00:00');
+// Bonus deadline: first match of the tournament (MEX vs RSA at Mexico City)
+// 2026-06-11 13:00 local time = 18:00 UTC (Mexico City is UTC-5 in summer)
+var BONUS_DEADLINE = new Date('2026-06-11T18:00:00Z');
 
 /**
  * Check if bonus predictions are locked (before first match)
@@ -690,7 +736,7 @@ function renderMatchesView() {
     html += '<span class="match-phase-badge ' + phaseClass(m.phase) + '">';
     html += m.group ? t('group') + ' ' + m.group : phaseLabel(m.phase);
     html += '</span>';
-    html += '<span>' + formatMatchDate(m.date) + ' · ' + (m.time || '') + '</span>';
+    html += '<span>' + formatMatchDateLocal(m) + ' · ' + formatMatchTime(m) + '</span>';
     html += '</div>';
 
     html += '<div class="match-teams">';
