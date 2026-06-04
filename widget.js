@@ -36,7 +36,11 @@ var i18n = {
     tbd: 'À déterminer', matchNumber: 'Match', vs: '-',
     group: 'Groupe', noPronosYet: 'Tu n\'as pas encore pronostiqué',
     bettingClosed: 'Paris fermés', bettingClosesIn: 'Ferme dans',
-    bonusClosed: 'Bonus fermés', bonusDeadline: 'Deadline bonus'
+    bonusClosed: 'Bonus fermés', bonusDeadline: 'Deadline bonus',
+    rulesTitle: '⏰ Règles des paris',
+    rulesMatch: 'Paris match : ferment 15 min avant le coup d\'envoi',
+    rulesBonus: 'Bonus (vainqueur + buteur) : ferment avant le 1er match',
+    rulesPoints: 'Points : Score exact = 3 pts, Bon résultat = 1 pt'
   },
   en: {
     subtitle: 'World Cup 2026 Predictions',
@@ -63,7 +67,11 @@ var i18n = {
     tbd: 'TBD', matchNumber: 'Match', vs: '-',
     group: 'Group', noPronosYet: 'No predictions yet',
     bettingClosed: 'Betting closed', bettingClosesIn: 'Closes in',
-    bonusClosed: 'Bonus closed', bonusDeadline: 'Bonus deadline'
+    bonusClosed: 'Bonus closed', bonusDeadline: 'Bonus deadline',
+    rulesTitle: '⏰ Betting Rules',
+    rulesMatch: 'Match bets: close 15 min before kick-off',
+    rulesBonus: 'Bonus (winner + scorer): close before 1st match',
+    rulesPoints: 'Points: Exact score = 3 pts, Good result = 1 pt'
   }
 };
 
@@ -841,6 +849,17 @@ function renderBonusBar() {
     html += '</div>';
   }
   html += '</div>';
+
+  // Rules reminder box
+  html += '<div class="rules-box">';
+  html += '<div class="rules-title">' + t('rulesTitle') + '</div>';
+  html += '<ul class="rules-list">';
+  html += '<li>' + t('rulesMatch') + '</li>';
+  html += '<li>' + t('rulesBonus') + '</li>';
+  html += '<li>' + t('rulesPoints') + '</li>';
+  html += '</ul>';
+  html += '</div>';
+
   container.innerHTML = html;
 }
 
