@@ -34,7 +34,8 @@ var i18n = {
     avatarGenerator: 'Générateur d\'avatar', avatarStyle: 'Style', avatarGenerate: 'Générer un avatar',
     avatarUseGenerated: 'Utiliser cet avatar', avatarRandom: 'Aléatoire', avatarCustom: 'URL personnalisée',
     tbd: 'À déterminer', matchNumber: 'Match', vs: '-',
-    group: 'Groupe', noPronosYet: 'Tu n\'as pas encore pronostiqué'
+    group: 'Groupe', noPronosYet: 'Tu n\'as pas encore pronostiqué',
+    bettingClosed: 'Paris fermés', bettingClosesIn: 'Ferme dans'
   },
   en: {
     subtitle: 'World Cup 2026 Predictions',
@@ -59,7 +60,8 @@ var i18n = {
     avatarGenerator: 'Avatar Generator', avatarStyle: 'Style', avatarGenerate: 'Generate Avatar',
     avatarUseGenerated: 'Use this avatar', avatarRandom: 'Random', avatarCustom: 'Custom URL',
     tbd: 'TBD', matchNumber: 'Match', vs: '-',
-    group: 'Group', noPronosYet: 'No predictions yet'
+    group: 'Group', noPronosYet: 'No predictions yet',
+    bettingClosed: 'Betting closed', bettingClosesIn: 'Closes in'
   }
 };
 
@@ -320,6 +322,30 @@ function formatMatchDate(dateStr) {
   if (!dateStr) return '';
   var d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString(currentLang === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'short' });
+}
+
+// Minutes before kick-off when betting closes (configurable)
+var BETTING_LOCK_MINUTES = 15;
+
+/**
+ * Check if betting is locked for a match (X minutes before kick-off)
+ * @param {Object} match - Match object with date (YYYY-MM-DD) and time (HH:MM)
+ * @returns {Object} { locked: boolean, minutesLeft: number|null }
+ */
+function isMatchLocked(match) {
+  if (!match.date || !match.time) return { locked: false, minutesLeft: null };
+  try {
+    var kickoff = new Date(match.date + 'T' + match.time + ':00');
+    var now = new Date();
+    var diffMs = kickoff.getTime() - now.getTime();
+    var diffMin = Math.floor(diffMs / 60000);
+    if (diffMin <= BETTING_LOCK_MINUTES) {
+      return { locked: true, minutesLeft: diffMin > 0 ? diffMin : 0 };
+    }
+    return { locked: false, minutesLeft: diffMin };
+  } catch (e) {
+    return { locked: false, minutesLeft: null };
+  }
 }
 
 function isInsideGrist() {
@@ -677,7 +703,8 @@ function renderMatchesView() {
       html += '<div class="match-result result-pending">' + (currentLang === 'fr' ? 'Mon prono' : 'My pred') + ': ' + myPred.ps1 + '-' + myPred.ps2 + ' · ' + t('pending') + '</div>';
     }
 
-    if (!hasResult && !isTBD) {
+    var lockInfo = isMatchLocked(m);
+    if (!hasResult && !isTBD && !lockInfo.locked) {
       var ps1 = myPred ? myPred.ps1 : 0;
       var ps2 = myPred ? myPred.ps2 : 0;
       html += '<div class="match-score">';
@@ -686,6 +713,11 @@ function renderMatchesView() {
       html += '<input type="number" class="score-input" id="s2-' + m.num + '" value="' + ps2 + '" min="0" max="20">';
       html += '</div>';
       html += '<button class="btn-prono' + (myPred ? ' saved' : '') + '" onclick="savePrediction(' + m.num + ')">' + (myPred ? t('saved') : t('saveProno')) + '</button>';
+    } else if (!hasResult && !isTBD && lockInfo.locked) {
+      html += '<div class="betting-closed">🔒 ' + t('bettingClosed') + '</div>';
+      if (myPred) {
+        html += '<div class="match-result result-pending" style="margin-top:8px;">' + (currentLang === 'fr' ? 'Mon prono' : 'My pred') + ': ' + myPred.ps1 + '-' + myPred.ps2 + '</div>';
+      }
     }
 
     html += '<div class="match-info">🏟️ ' + sanitize(m.stadium) + ' · ' + sanitize(m.city) + '</div>';
