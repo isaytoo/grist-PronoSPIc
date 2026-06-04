@@ -343,10 +343,17 @@ function formatMatchDate(dateStr) {
 function getMatchKickoffUTC(match) {
   if (!match.date || !match.time) return null;
   var cityOffset = CITY_TZ[match.city] || -5; // Default to CDT if city unknown
-  // Parse local time and convert to UTC
-  var localDate = new Date(match.date + 'T' + match.time + ':00');
-  // Add the city offset to get UTC (offset is negative, so we subtract)
-  return new Date(localDate.getTime() - cityOffset * 60 * 60 * 1000);
+  // Parse time components manually to avoid browser timezone interpretation
+  var parts = match.date.split('-');
+  var timeParts = match.time.split(':');
+  var year = parseInt(parts[0], 10);
+  var month = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
+  var day = parseInt(parts[2], 10);
+  var hour = parseInt(timeParts[0], 10);
+  var minute = parseInt(timeParts[1], 10);
+  // Create UTC date by subtracting the city offset from the local time
+  // cityOffset is negative (e.g., -5 for Mexico), so we add its absolute value to get UTC
+  return new Date(Date.UTC(year, month, day, hour - cityOffset, minute));
 }
 
 /**
