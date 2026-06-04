@@ -35,7 +35,8 @@ var i18n = {
     avatarUseGenerated: 'Utiliser cet avatar', avatarRandom: 'Aléatoire', avatarCustom: 'URL personnalisée',
     tbd: 'À déterminer', matchNumber: 'Match', vs: '-',
     group: 'Groupe', noPronosYet: 'Tu n\'as pas encore pronostiqué',
-    bettingClosed: 'Paris fermés', bettingClosesIn: 'Ferme dans'
+    bettingClosed: 'Paris fermés', bettingClosesIn: 'Ferme dans',
+    bonusClosed: 'Bonus fermés', bonusDeadline: 'Deadline bonus'
   },
   en: {
     subtitle: 'World Cup 2026 Predictions',
@@ -61,7 +62,8 @@ var i18n = {
     avatarUseGenerated: 'Use this avatar', avatarRandom: 'Random', avatarCustom: 'Custom URL',
     tbd: 'TBD', matchNumber: 'Match', vs: '-',
     group: 'Group', noPronosYet: 'No predictions yet',
-    bettingClosed: 'Betting closed', bettingClosesIn: 'Closes in'
+    bettingClosed: 'Betting closed', bettingClosesIn: 'Closes in',
+    bonusClosed: 'Bonus closed', bonusDeadline: 'Bonus deadline'
   }
 };
 
@@ -346,6 +348,20 @@ function isMatchLocked(match) {
   } catch (e) {
     return { locked: false, minutesLeft: null };
   }
+}
+
+// Bonus deadline: first match of the tournament minus BETTING_LOCK_MINUTES
+// First match: 2026-06-11 13:00 (MEX vs RSA)
+var BONUS_DEADLINE = new Date('2026-06-11T13:00:00');
+
+/**
+ * Check if bonus predictions are locked (before first match)
+ * @returns {Object} { locked: boolean, deadline: Date }
+ */
+function isBonusLocked() {
+  var now = new Date();
+  var deadlineWithMargin = new Date(BONUS_DEADLINE.getTime() - BETTING_LOCK_MINUTES * 60000);
+  return { locked: now >= deadlineWithMargin, deadline: deadlineWithMargin };
 }
 
 function isInsideGrist() {
@@ -734,25 +750,44 @@ function renderBonusBar() {
   var container = document.getElementById('bonus-bar');
   if (!container) return;
   var myBonus = bonusData.find(function(b) { return (b.email || '').toLowerCase().trim() === (currentUserEmail || '').toLowerCase().trim(); });
+  var bonusLock = isBonusLocked();
 
   var html = '<div class="bonus-section">';
   html += '<div class="bonus-title">🎯 ' + t('bonusTitle') + '</div>';
-  html += '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">';
-  html += '<div style="flex:1;min-width:150px;">';
-  html += '<label style="font-size:11px;font-weight:600;color:#64748b;">' + t('bonusWinner') + '</label>';
-  html += '<select id="bonus-winner" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">';
-  html += '<option value="">--</option>';
-  TEAM_DATA.forEach(function(team) {
-    var sel = myBonus && myBonus.winner === team.code ? ' selected' : '';
-    html += '<option value="' + team.code + '"' + sel + '>' + (currentLang === 'fr' ? team.name_fr : team.name_en) + '</option>';
-  });
-  html += '</select></div>';
-  html += '<div style="flex:1;min-width:150px;">';
-  html += '<label style="font-size:11px;font-weight:600;color:#64748b;">' + t('bonusTopScorer') + '</label>';
-  html += '<input type="text" id="bonus-scorer" value="' + sanitize(myBonus ? myBonus.scorer : '') + '" placeholder="Ex: Mbappé" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">';
+
+  if (bonusLock.locked) {
+    // Bonus is locked - show read-only view
+    html += '<div class="betting-closed" style="margin-bottom:12px;">🔒 ' + t('bonusClosed') + '</div>';
+    if (myBonus && (myBonus.winner || myBonus.scorer)) {
+      var winnerTeam = TEAM_DATA.find(function(t) { return t.code === myBonus.winner; });
+      var winnerName = winnerTeam ? (currentLang === 'fr' ? winnerTeam.name_fr : winnerTeam.name_en) : myBonus.winner;
+      html += '<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:#64748b;">';
+      if (myBonus.winner) html += '<span><strong>' + t('bonusWinner') + ':</strong> ' + sanitize(winnerName) + '</span>';
+      if (myBonus.scorer) html += '<span><strong>' + t('bonusTopScorer') + ':</strong> ' + sanitize(myBonus.scorer) + '</span>';
+      html += '</div>';
+    } else {
+      html += '<div style="font-size:13px;color:#94a3b8;font-style:italic;">' + t('noPronosYet') + '</div>';
+    }
+  } else {
+    // Bonus is open - show editable form
+    html += '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">';
+    html += '<div style="flex:1;min-width:150px;">';
+    html += '<label style="font-size:11px;font-weight:600;color:#64748b;">' + t('bonusWinner') + '</label>';
+    html += '<select id="bonus-winner" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">';
+    html += '<option value="">--</option>';
+    TEAM_DATA.forEach(function(team) {
+      var sel = myBonus && myBonus.winner === team.code ? ' selected' : '';
+      html += '<option value="' + team.code + '"' + sel + '>' + (currentLang === 'fr' ? team.name_fr : team.name_en) + '</option>';
+    });
+    html += '</select></div>';
+    html += '<div style="flex:1;min-width:150px;">';
+    html += '<label style="font-size:11px;font-weight:600;color:#64748b;">' + t('bonusTopScorer') + '</label>';
+    html += '<input type="text" id="bonus-scorer" value="' + sanitize(myBonus ? myBonus.scorer : '') + '" placeholder="Ex: Mbappé" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">';
+    html += '</div>';
+    html += '<button class="btn-prono" onclick="saveBonus()" style="min-width:120px;">' + t('bonusSave') + '</button>';
+    html += '</div>';
+  }
   html += '</div>';
-  html += '<button class="btn-prono" onclick="saveBonus()" style="min-width:120px;">' + t('bonusSave') + '</button>';
-  html += '</div></div>';
   container.innerHTML = html;
 }
 
