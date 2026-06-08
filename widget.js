@@ -411,9 +411,9 @@ function isMatchLocked(match) {
   }
 }
 
-// Bonus deadline: first match of the tournament (MEX vs RSA at Mexico City)
-// 2026-06-11 13:00 local time = 18:00 UTC (Mexico City is UTC-5 in summer)
-var BONUS_DEADLINE = new Date('2026-06-11T18:00:00Z');
+// Bonus deadline = coup d'envoi du 1er match du tournoi (dérivé du calendrier, donc
+// toujours cohérent avec les horaires/fuseaux). Repli au 11/06/2026 19:00 UTC si besoin.
+var BONUS_DEADLINE = getMatchKickoffUTC(MATCH_DATA[0]) || new Date('2026-06-11T19:00:00Z');
 
 /**
  * Check if bonus predictions are locked (before first match)
