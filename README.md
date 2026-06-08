@@ -8,7 +8,7 @@ Widget Grist complet pour gérer les pronostics de la Coupe du Monde 2026 avec i
 
 ### 🏟️ **Gestion des Matchs**
 - **48 équipes** réparties en 12 groupes
-- **104 matchs** : phases de groupes, 8e, quarts, demies, finale, 3e place
+- **104 matchs** : phases de groupes, 16e, 8e, quarts, demies, finale, 3e place
 - **Interface intuitive** pour saisir ses pronostics
 - **Filtres** par phase de compétition et par groupe
 - **Affichage des résultats officiels** avec calcul des points
