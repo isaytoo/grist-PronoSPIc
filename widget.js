@@ -1188,6 +1188,9 @@ function renderMyStats() {
   var container = document.getElementById('mystats-content');
   var myTotal = 0, myExact = 0, myGood = 0, myCount = predictions.length;
   predictions.forEach(function(p) { myTotal += (p.pts || 0); if (p.pts === 3) myExact++; if (p.pts === 1) myGood++; });
+  // Inclure les points bonus (cohérence avec le classement)
+  var myBonusStat = bonusData.find(function(b) { return (b.email || '').toLowerCase().trim() === (currentUserEmail || '').toLowerCase().trim(); });
+  if (myBonusStat) myTotal += (myBonusStat.pts || 0);
   var matchesWithResult = matches.filter(function(m) { return m.s1 >= 0 && m.s2 >= 0; }).length;
   var rate = matchesWithResult > 0 ? Math.round(((myExact * 3 + myGood) / (matchesWithResult * 3)) * 100) : 0;
 
