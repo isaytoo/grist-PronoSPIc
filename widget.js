@@ -170,13 +170,13 @@ var TEAM_DATA = [
 ];
 
 // =============================================================================
-// DATA: MATCHES (72 groupes + 24 knockout = 96 matchs)
+// DATA: MATCHES (72 groupes + 32 knockout = 104 matchs)
 // =============================================================================
 
 // Timezone offsets for each host city (summer time / daylight saving)
 // Format: offset from UTC in hours (negative = west of UTC)
 var CITY_TZ = {
-  'Mexico City': -5, 'Guadalajara': -5, 'Monterrey': -5,  // Mexico CDT (UTC-5)
+  'Mexico City': -6, 'Guadalajara': -6, 'Monterrey': -6,  // Mexico CST (UTC-6, plus d'heure d'été depuis 2022)
   'Toronto': -4, 'Vancouver': -7,                         // Canada EDT/PDT
   'Atlanta': -4, 'Boston': -4, 'Miami': -4, 'New York': -4, 'Philadelphia': -4, // US EDT (UTC-4)
   'Dallas': -5, 'Houston': -5, 'Kansas City': -5,         // US CDT (UTC-5)
