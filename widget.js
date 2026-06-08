@@ -40,7 +40,8 @@ var i18n = {
     rulesTitle: '⏰ Règles des paris',
     rulesMatch: 'Paris match : ferment 15 min avant le coup d\'envoi',
     rulesBonus: 'Bonus (vainqueur + buteur) : ferment avant le 1er match',
-    rulesPoints: 'Points : Score exact = 3 pts, Bon résultat = 1 pt'
+    rulesPoints: 'Points : Score exact = 3 pts, Bon résultat = 1 pt',
+    rulesBonusPoints: 'Bonus : Vainqueur final = 5 pts, Meilleur buteur = 3 pts'
   },
   en: {
     subtitle: 'World Cup 2026 Predictions',
@@ -71,7 +72,8 @@ var i18n = {
     rulesTitle: '⏰ Betting Rules',
     rulesMatch: 'Match bets: close 15 min before kick-off',
     rulesBonus: 'Bonus (winner + scorer): close before 1st match',
-    rulesPoints: 'Points: Exact score = 3 pts, Good result = 1 pt'
+    rulesPoints: 'Points: Exact score = 3 pts, Good result = 1 pt',
+    rulesBonusPoints: 'Bonus: Tournament winner = 5 pts, Top scorer = 3 pts'
   }
 };
 
@@ -857,6 +859,7 @@ function renderBonusBar() {
   html += '<li>' + t('rulesMatch') + '</li>';
   html += '<li>' + t('rulesBonus') + '</li>';
   html += '<li>' + t('rulesPoints') + '</li>';
+  html += '<li>' + t('rulesBonusPoints') + '</li>';
   html += '</ul>';
   html += '</div>';
 
@@ -1489,25 +1492,27 @@ async function fetchMatchResults() {
       }
     }
 
-    // Extract top scorers
+    // Extract top scorers — format openfootball : goals1 (équipe 1) et goals2 (équipe 2)
+    // par match, chaque entrée { name, minute, penalty?, owngoal? }. Les csc ne comptent pas.
     var scorerMap = {};
-    var allGoals = [];
-    if (data.rounds) {
-      data.rounds.forEach(function(round) {
-        (round.matches || []).forEach(function(rm) { allGoals = allGoals.concat(rm.goals || []); });
+    function tagTeam(ofName) {
+      var code = TEAM_NAME_TO_CODE[ofName];
+      return code ? teamName(code) : (ofName || '');
+    }
+    function addGoals(arr, teamLabel) {
+      (arr || []).forEach(function(g) {
+        if (g.owngoal) return; // but contre son camp : non crédité au buteur
+        var name = g.name || g.player || '';
+        if (!name) return;
+        if (!scorerMap[name]) scorerMap[name] = { name: name, team: teamLabel, goals: 0 };
+        scorerMap[name].goals++;
       });
     }
-    if (data.matches) {
-      data.matches.forEach(function(m) { allGoals = allGoals.concat(m.goals || []); });
-    }
-    allGoals.forEach(function(g) {
-      var name = g.name || g.player || '';
-      if (name) {
-        if (!scorerMap[name]) scorerMap[name] = { name: name, team: g.team || '', goals: 0 };
-        scorerMap[name].goals++;
-      }
+    (data.matches || []).forEach(function(m) {
+      addGoals(m.goals1, tagTeam(m.team1));
+      addGoals(m.goals2, tagTeam(m.team2));
     });
-    topScorers = Object.values(scorerMap).sort(function(a, b) { return b.goals - a.goals; });
+    topScorers = Object.values(scorerMap).sort(function(a, b) { return b.goals - a.goals || a.name.localeCompare(b.name); });
 
     if (updatedMatches.length === 0) {
       showToast(currentLang === 'fr' ? 'Données à jour' : 'Data up to date', 'info');
