@@ -1296,7 +1296,10 @@ function renderAdmin() {
 async function saveResult(matchId, matchNum) {
   var s1 = parseInt(document.getElementById('admin-s1-' + matchNum).value);
   var s2 = parseInt(document.getElementById('admin-s2-' + matchNum).value);
-  if (isNaN(s1) || isNaN(s2)) return;
+  if (isNaN(s1) || isNaN(s2)) {
+    showToast(currentLang === 'fr' ? 'Saisis les deux scores' : 'Enter both scores', 'error');
+    return;
+  }
   try {
     await grist.docApi.applyUserActions([['UpdateRecord', MATCHES_TABLE, matchId, { Score1: s1, Score2: s2 }]]);
     var m = matches.find(function(mm) { return mm.id === matchId; });
