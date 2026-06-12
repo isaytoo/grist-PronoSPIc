@@ -1467,9 +1467,11 @@ async function fetchMatchResults() {
     if (!response.ok) throw new Error('HTTP ' + response.status);
     var data = await response.json();
     var updatedMatches = [];
+    var apiScoredCount = 0; // nb de matchs ayant un score publié dans la source
 
     for (var ai = 0; ai < data.matches.length; ai++) {
       var apiMatch = data.matches[ai];
+      if (apiMatch.score && apiMatch.score.ft && apiMatch.score.ft[0] != null && apiMatch.score.ft[1] != null) apiScoredCount++;
       var apiT1Name = apiMatch.team1 || '';
       var apiT2Name = apiMatch.team2 || '';
       var apiCode1 = TEAM_NAME_TO_CODE[apiT1Name] || apiT1Name;
@@ -1515,7 +1517,13 @@ async function fetchMatchResults() {
     topScorers = Object.values(scorerMap).sort(function(a, b) { return b.goals - a.goals || a.name.localeCompare(b.name); });
 
     if (updatedMatches.length === 0) {
-      showToast(currentLang === 'fr' ? 'Données à jour' : 'Data up to date', 'info');
+      var msg;
+      if (apiScoredCount === 0) {
+        msg = currentLang === 'fr' ? 'Aucun résultat publié pour l\'instant (matchs non encore joués)' : 'No results published yet (matches not played)';
+      } else {
+        msg = currentLang === 'fr' ? 'Données déjà à jour' : 'Data already up to date';
+      }
+      showToast(msg, 'info');
       renderCurrentTab();
       return;
     }
