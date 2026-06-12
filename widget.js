@@ -1249,6 +1249,15 @@ function renderAdmin() {
   html += '<button class="btn-prono" onclick="recalculateAllPoints()" style="flex:1;min-width:200px;">' + t('recalculate') + '</button>';
   html += '</div>';
 
+  // Liens vers les résultats officiels (pour saisie manuelle)
+  html += '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px 16px;margin-bottom:16px;">';
+  html += '<div style="font-weight:700;color:#1e40af;margin-bottom:6px;">🔗 ' + (currentLang === 'fr' ? 'Résultats officiels' : 'Official results') + '</div>';
+  html += '<div style="font-size:12px;color:#475569;margin-bottom:10px;">' + (currentLang === 'fr' ? 'Consultez les scores officiels puis saisissez-les ci-dessous.' : 'Check the official scores then enter them below.') + '</div>';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+  html += '<a href="https://www.fifa.com/fr/tournaments/mens/worldcup/canadamexicousa2026/scores-fixtures" target="_blank" rel="noopener" class="btn-prono" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;">⚽ FIFA — ' + (currentLang === 'fr' ? 'Calendrier & scores' : 'Fixtures & scores') + ' ↗</a>';
+  html += '<a href="https://www.google.com/search?q=' + encodeURIComponent(currentLang === 'fr' ? 'résultats coupe du monde 2026' : 'world cup 2026 results') + '" target="_blank" rel="noopener" class="btn-prono" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;background:#64748b;">🔎 Google ↗</a>';
+  html += '</div></div>';
+
   html += '<div style="background:white;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid #e2e8f0;">';
   html += '<h3 style="margin-bottom:12px;">🎯 ' + t('validateBonus') + '</h3>';
   html += '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">';
