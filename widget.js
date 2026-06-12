@@ -780,6 +780,8 @@ function renderMatchesView() {
       html += '<div class="match-result ' + ptsClass + '">' + (currentLang === 'fr' ? 'Mon prono' : 'My pred') + ': ' + myPred.ps1 + '-' + myPred.ps2 + ' · ' + ptsLabel + '</div>';
     } else if (!hasResult && myPred) {
       html += '<div class="match-result result-pending">' + (currentLang === 'fr' ? 'Mon prono' : 'My pred') + ': ' + myPred.ps1 + '-' + myPred.ps2 + ' · ' + t('pending') + '</div>';
+    } else if (hasResult && !myPred) {
+      html += '<div class="match-result result-pending">' + (currentLang === 'fr' ? 'Non pronostiqué · 0 pt' : 'Not predicted · 0 pt') + '</div>';
     }
 
     var lockInfo = isMatchLocked(m);
