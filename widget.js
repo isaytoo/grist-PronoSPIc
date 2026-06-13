@@ -546,6 +546,39 @@ async function seedMatches() {
   } catch (e) { console.warn('[PronoSPIc] seedMatches:', e.message); }
 }
 
+/**
+ * Resynchronise le calendrier (date/heure/ville/stade) de la table Prono_Matches
+ * depuis MATCH_DATA, qui fait foi. Corrige les lignes semées avec d'anciens horaires
+ * sans toucher aux scores ni aux pronostics. Idempotent : n'écrit que si différence.
+ */
+async function syncMatchesSchedule() {
+  try {
+    var md = await grist.docApi.fetchTable(MATCHES_TABLE);
+    if (!md || !md.id || !md.id.length) return;
+    var byNum = {};
+    for (var i = 0; i < md.id.length; i++) {
+      byNum[md.Match_Number[i]] = {
+        id: md.id[i], date: md.Match_Date[i], time: md.Match_Time[i],
+        city: md.City[i], stadium: md.Stadium[i]
+      };
+    }
+    var updates = [];
+    MATCH_DATA.forEach(function(m) {
+      var row = byNum[m.num];
+      if (!row) return;
+      if (row.date !== m.date || row.time !== m.time || row.city !== m.city || row.stadium !== m.stadium) {
+        updates.push(['UpdateRecord', MATCHES_TABLE, row.id, {
+          Match_Date: m.date, Match_Time: m.time, City: m.city, Stadium: m.stadium
+        }]);
+      }
+    });
+    if (updates.length) {
+      await grist.docApi.applyUserActions(updates);
+      console.log('[PronoSPIc] Horaires resynchronisés :', updates.length, 'match(s) corrigé(s).');
+    }
+  } catch (e) { console.warn('[PronoSPIc] syncMatchesSchedule:', e.message); }
+}
+
 async function loadAllData() {
   try {
     var md = await grist.docApi.fetchTable(MATCHES_TABLE);
@@ -1573,7 +1606,7 @@ if (!isInsideGrist()) {
     await grist.ready({ requiredAccess: 'full' });
     await detectRole();
     await ensureTables();
-    if (isOwner) { await seedTeams(); await seedMatches(); await applySecurityRules(); }
+    if (isOwner) { await seedTeams(); await seedMatches(); await syncMatchesSchedule(); await applySecurityRules(); }
     await loadAllData();
     renderCurrentTab();
     setTimeout(updateHeaderUserInfo, 100);
