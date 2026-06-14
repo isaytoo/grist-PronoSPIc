@@ -109,6 +109,8 @@ var activeTab = 'matches';
 var activePhaseFilter = 'all';
 var activeGroupFilter = '';
 var activeDateFilter = ''; // clé date locale 'YYYY-MM-DD' (fuseau navigateur) ou '' pour toutes
+var adminDateFilter = '';  // filtre date (admin)
+var adminStatusFilter = 'all'; // 'all' | 'todo' (à saisir) | 'done' (saisis)
 
 var TEAMS_TABLE = 'Prono_Teams';
 var MATCHES_TABLE = 'Prono_Matches';
@@ -1397,13 +1399,61 @@ function renderAdmin() {
   html += '<button class="admin-save-btn" onclick="validateBonusPoints()" style="padding:8px 20px;">' + t('validateBonus') + '</button>';
   html += '</div></div>';
 
-  matches.forEach(function(m) {
-    if (m.t1 === 'TBD' && m.t2 === 'TBD') return;
+  // --- Barre de filtres résultats (date / statut) ---
+  var fr = currentLang === 'fr';
+  var adminMatches = matches.filter(function(m) { return !(m.t1 === 'TBD' && m.t2 === 'TBD'); });
+  var locale = fr ? 'fr-FR' : 'en-US';
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">';
+  // statut
+  [['all', fr ? 'Tous' : 'All'], ['todo', fr ? 'À saisir' : 'To enter'], ['done', fr ? 'Saisis' : 'Entered']].forEach(function(s) {
+    html += '<button class="filter-btn ' + (adminStatusFilter === s[0] ? 'active' : '') + '" onclick="setAdminStatusFilter(\'' + s[0] + '\')">' + s[1] + '</button>';
+  });
+  html += '<span style="width:1px;height:24px;background:#e2e8f0;margin:0 4px;"></span>';
+  // raccourci aujourd'hui
+  var dateKeys = [];
+  adminMatches.forEach(function(m) { var k = matchLocalDateKey(m); if (k && dateKeys.indexOf(k) === -1) dateKeys.push(k); });
+  dateKeys.sort();
+  var todayKey = new Date().toLocaleDateString('en-CA');
+  if (dateKeys.indexOf(todayKey) !== -1) {
+    html += '<button class="filter-btn ' + (adminDateFilter === todayKey ? 'active' : '') + '" onclick="setAdminDateFilter(\'' + todayKey + '\')">⚡ ' + (fr ? "Aujourd'hui" : 'Today') + '</button>';
+  }
+  html += '<select class="filter-date" onchange="setAdminDateFilter(this.value)">';
+  html += '<option value=""' + (adminDateFilter === '' ? ' selected' : '') + '>📅 ' + (fr ? 'Toutes les dates' : 'All dates') + '</option>';
+  dateKeys.forEach(function(k) {
+    var pp = k.split('-');
+    var dd = new Date(parseInt(pp[0], 10), parseInt(pp[1], 10) - 1, parseInt(pp[2], 10));
+    var lbl = dd.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' });
+    html += '<option value="' + k + '"' + (adminDateFilter === k ? ' selected' : '') + '>' + lbl + '</option>';
+  });
+  html += '</select></div>';
+
+  // --- Filtrage + tri chronologique ---
+  var nowMs = Date.now();
+  var adminList = adminMatches.filter(function(m) {
+    if (adminDateFilter && matchLocalDateKey(m) !== adminDateFilter) return false;
+    var hasResult = m.s1 >= 0 && m.s2 >= 0;
+    if (adminStatusFilter === 'done') return hasResult;
+    if (adminStatusFilter === 'todo') {
+      var k = getMatchKickoffUTC(m);
+      return !hasResult && k && k.getTime() <= nowMs; // match commencé sans résultat
+    }
+    return true;
+  });
+  adminList.sort(function(a, b) {
+    var ka = getMatchKickoffUTC(a), kb = getMatchKickoffUTC(b);
+    return (ka ? ka.getTime() : 0) - (kb ? kb.getTime() : 0) || (a.num - b.num);
+  });
+  html += '<div style="font-size:12px;color:#94a3b8;font-weight:600;margin:0 2px 10px;">' + adminList.length + ' ' + (fr ? (adminList.length > 1 ? 'matchs' : 'match') : (adminList.length > 1 ? 'matches' : 'match')) + '</div>';
+  if (adminList.length === 0) {
+    html += '<div style="text-align:center;color:#94a3b8;padding:30px;">' + (fr ? 'Aucun match' : 'No match') + '</div>';
+  }
+
+  adminList.forEach(function(m) {
     var team1 = getTeam(m.t1); var team2 = getTeam(m.t2);
     var cs1 = m.s1 >= 0 ? m.s1 : '';
     var cs2 = m.s2 >= 0 ? m.s2 : '';
     html += '<div class="admin-match">';
-    html += '<span style="font-size:11px;color:#94a3b8;width:30px;">#' + m.num + '</span>';
+    html += '<span style="font-size:11px;color:#94a3b8;width:90px;line-height:1.3;">#' + m.num + '<br>' + formatMatchDateLocal(m) + ' · ' + formatMatchTime(m) + '</span>';
     html += '<div class="admin-teams">';
     if (team1.flag) html += '<img class="admin-flag" src="' + flagUrl(team1.flag) + '">';
     html += '<span>' + teamName(m.t1) + '</span></div>';
@@ -1418,6 +1468,16 @@ function renderAdmin() {
     html += '</div>';
   });
   container.innerHTML = html;
+}
+
+function setAdminDateFilter(dateKey) {
+  adminDateFilter = dateKey || '';
+  renderAdmin();
+}
+
+function setAdminStatusFilter(status) {
+  adminStatusFilter = status;
+  renderAdmin();
 }
 
 async function saveResult(matchId, matchNum) {
