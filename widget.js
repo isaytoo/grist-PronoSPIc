@@ -848,19 +848,7 @@ function renderMatchesView() {
   if (aFilter) {
     html += '<div style="font-size:12px;color:#94a3b8;font-weight:600;margin:0 4px 8px;">' + filtered.length + ' ' + (currentLang === 'fr' ? (filtered.length > 1 ? 'matchs' : 'match') : (filtered.length > 1 ? 'matches' : 'match')) + '</div>';
   }
-  var dayLocale = currentLang === 'fr' ? 'fr-FR' : 'en-US';
-  var lastDayKey = null;
   filtered.forEach(function(m) {
-    // En-tête de jour quand la date locale change
-    var dayKey = matchLocalDateKey(m);
-    if (dayKey !== lastDayKey) {
-      lastDayKey = dayKey;
-      var p = dayKey.split('-');
-      var dd = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
-      var label = dd.toLocaleDateString(dayLocale, { weekday: 'long', day: 'numeric', month: 'long' });
-      label = label.charAt(0).toUpperCase() + label.slice(1);
-      html += '<div class="day-separator"><span>' + label + '</span></div>';
-    }
     var team1 = getTeam(m.t1);
     var team2 = getTeam(m.t2);
     var myPred = predictions.find(function(p) { return p.matchNum === m.num; });
