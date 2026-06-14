@@ -780,6 +780,11 @@ function renderMatchFilters() {
   var dateKeys = [];
   matches.forEach(function(m) { var k = matchLocalDateKey(m); if (k && dateKeys.indexOf(k) === -1) dateKeys.push(k); });
   dateKeys.sort();
+  // Raccourci "Aujourd'hui" si des matchs ont lieu ce jour (date locale)
+  var todayKey = new Date().toLocaleDateString('en-CA');
+  if (dateKeys.indexOf(todayKey) !== -1) {
+    html += '<button class="filter-btn ' + (activeDateFilter === todayKey ? 'active' : '') + '" onclick="setDateFilter(\'' + todayKey + '\')">⚡ ' + (currentLang === 'fr' ? "Aujourd'hui" : 'Today') + '</button>';
+  }
   html += '<select class="filter-date" onchange="setDateFilter(this.value)">';
   html += '<option value=""' + (activeDateFilter === '' ? ' selected' : '') + '>📅 ' + (currentLang === 'fr' ? 'Toutes les dates' : 'All dates') + '</option>';
   dateKeys.forEach(function(k) {
@@ -802,17 +807,20 @@ function matchLocalDateKey(m) {
 function setPhaseFilter(phase) {
   activePhaseFilter = phase;
   activeGroupFilter = '';
+  activeDateFilter = ''; // un seul critère actif à la fois
   renderMatchesView();
 }
 
 function setGroupFilter(group) {
   activeGroupFilter = activeGroupFilter === group ? '' : group;
   activePhaseFilter = activeGroupFilter ? 'group' : 'all';
+  activeDateFilter = '';
   renderMatchesView();
 }
 
 function setDateFilter(dateKey) {
   activeDateFilter = dateKey || '';
+  if (activeDateFilter) { activePhaseFilter = 'all'; activeGroupFilter = ''; }
   renderMatchesView();
 }
 
@@ -830,6 +838,10 @@ function renderMatchesView() {
   if (filtered.length === 0) { container.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:40px;">' + t('noMatches') + '</div>'; return; }
 
   var html = '';
+  var aFilter = activeDateFilter || activeGroupFilter || activePhaseFilter !== 'all';
+  if (aFilter) {
+    html += '<div style="font-size:12px;color:#94a3b8;font-weight:600;margin:0 4px 8px;">' + filtered.length + ' ' + (currentLang === 'fr' ? (filtered.length > 1 ? 'matchs' : 'match') : (filtered.length > 1 ? 'matches' : 'match')) + '</div>';
+  }
   filtered.forEach(function(m) {
     var team1 = getTeam(m.t1);
     var team2 = getTeam(m.t2);
