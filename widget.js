@@ -111,6 +111,7 @@ var activeGroupFilter = '';
 var activeDateFilter = ''; // clé date locale 'YYYY-MM-DD' (fuseau navigateur) ou '' pour toutes
 var adminDateFilter = '';  // filtre date (admin)
 var adminStatusFilter = 'all'; // 'all' | 'todo' (à saisir) | 'done' (saisis)
+var statsFilter = 'all'; // Mes Stats : 'all' | 'exact' | 'good' | 'wrong' | 'pending'
 
 var TEAMS_TABLE = 'Prono_Teams';
 var MATCHES_TABLE = 'Prono_Matches';
@@ -1346,13 +1347,49 @@ function renderMyStats() {
 
   if (predictions.length === 0) {
     html += '<div style="text-align:center;color:#94a3b8;padding:40px;">' + t('noPronosYet') + '</div>';
-  } else {
+    container.innerHTML = html;
+    return;
+  }
+
+  // Catégorise chaque prono : exact / good / wrong / pending
+  var fr = currentLang === 'fr';
+  var items = [];
+  predictions.forEach(function(pred) {
+    var m = matches.find(function(mm) { return mm.num === pred.matchNum; });
+    if (!m) return;
+    var hasResult = m.s1 >= 0 && m.s2 >= 0;
+    var cat = !hasResult ? 'pending' : (pred.pts === 3 ? 'exact' : (pred.pts === 1 ? 'good' : 'wrong'));
+    items.push({ pred: pred, m: m, hasResult: hasResult, cat: cat });
+  });
+  // Tri chronologique par coup d'envoi
+  items.sort(function(a, b) {
+    var ka = getMatchKickoffUTC(a.m), kb = getMatchKickoffUTC(b.m);
+    return (ka ? ka.getTime() : 0) - (kb ? kb.getTime() : 0) || (a.m.num - b.m.num);
+  });
+  var counts = { all: items.length, exact: 0, good: 0, wrong: 0, pending: 0 };
+  items.forEach(function(it) { counts[it.cat]++; });
+
+  // Barre de filtres intelligents (n'affiche que les catégories non vides)
+  var chips = [
+    ['all', fr ? 'Tous' : 'All', counts.all],
+    ['exact', (fr ? 'Exacts' : 'Exact') + ' ✓', counts.exact],
+    ['good', fr ? 'Bons résultats' : 'Good', counts.good],
+    ['wrong', fr ? 'Manqués' : 'Missed', counts.wrong],
+    ['pending', fr ? 'En attente' : 'Pending', counts.pending]
+  ];
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">';
+  chips.forEach(function(c) {
+    if (c[0] !== 'all' && c[2] === 0) return; // masque les catégories vides
+    html += '<button class="filter-btn ' + (statsFilter === c[0] ? 'active' : '') + '" onclick="setStatsFilter(\'' + c[0] + '\')">' + c[1] + ' (' + c[2] + ')</button>';
+  });
+  html += '</div>';
+
+  var filteredItems = items.filter(function(it) { return statsFilter === 'all' || it.cat === statsFilter; });
+  {
     html += '<div style="display:flex;flex-direction:column;gap:8px;">';
-    predictions.forEach(function(pred) {
-      var m = matches.find(function(mm) { return mm.num === pred.matchNum; });
-      if (!m) return;
+    filteredItems.forEach(function(it) {
+      var pred = it.pred, m = it.m, hasResult = it.hasResult;
       var team1 = getTeam(m.t1); var team2 = getTeam(m.t2);
-      var hasResult = m.s1 >= 0 && m.s2 >= 0;
       html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:white;border-radius:10px;border:1px solid #e2e8f0;font-size:13px;">';
       if (team1.flag) html += '<img style="width:24px;height:16px;border-radius:2px;" src="' + flagUrl(team1.flag) + '">';
       html += '<span style="font-weight:600;">' + teamName(m.t1) + '</span>';
@@ -1491,6 +1528,11 @@ function renderAdmin() {
     html += '</div>';
   });
   container.innerHTML = html;
+}
+
+function setStatsFilter(cat) {
+  statsFilter = cat;
+  renderMyStats();
 }
 
 function setAdminDateFilter(dateKey) {
