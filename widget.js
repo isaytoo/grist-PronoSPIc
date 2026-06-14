@@ -846,7 +846,7 @@ function renderMatchesView() {
   var html = '';
   var aFilter = activeDateFilter || activeGroupFilter || activePhaseFilter !== 'all';
   if (aFilter) {
-    html += '<div style="font-size:12px;color:#94a3b8;font-weight:600;margin:0 4px 8px;">' + filtered.length + ' ' + (currentLang === 'fr' ? (filtered.length > 1 ? 'matchs' : 'match') : (filtered.length > 1 ? 'matches' : 'match')) + '</div>';
+    html += '<div style="grid-column:1/-1;font-size:12px;color:#94a3b8;font-weight:600;margin:0 4px 8px;">' + filtered.length + ' ' + (currentLang === 'fr' ? (filtered.length > 1 ? 'matchs' : 'match') : (filtered.length > 1 ? 'matches' : 'match')) + '</div>';
   }
   filtered.forEach(function(m) {
     var team1 = getTeam(m.t1);
