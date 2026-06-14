@@ -1165,23 +1165,44 @@ function renderLeaderboard() {
     html += '</div>';
   }
 
+  // Recherche de joueur (filtre instantané, le rang réel est conservé)
+  if (ranked.length > 1) {
+    var ph = currentLang === 'fr' ? 'Rechercher un joueur…' : 'Search a player…';
+    html += '<div style="margin-bottom:12px;"><input type="text" id="lb-search" oninput="filterLeaderboard(this.value)" placeholder="🔍 ' + ph + '" style="width:100%;max-width:320px;padding:8px 12px;border:1px solid #e2e8f0;border-radius:20px;font-size:13px;"></div>';
+  }
+
   html += '<table class="leaderboard-table"><thead><tr>';
   html += '<th>' + t('rank') + '</th><th>' + t('player') + '</th><th>' + t('exactCount') + '</th><th>' + t('goodCount') + '</th><th>' + t('totalPts') + '</th>';
-  html += '</tr></thead><tbody>';
+  html += '</tr></thead><tbody id="lb-tbody">';
   ranked.forEach(function(p, i) {
     var rowAvatar = getAvatarUrl(p.email);
     var avatarHtml = rowAvatar
       ? '<img src="' + sanitize(rowAvatar) + '" style="width:28px;height:28px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px;">'
       : '<span style="display:inline-block;width:28px;height:28px;border-radius:50%;background:#e2e8f0;text-align:center;line-height:28px;font-size:14px;vertical-align:middle;margin-right:6px;">👤</span>';
-    html += '<tr' + (p.email === currentUserEmail ? ' style="background:#f0f7ff;font-weight:600;"' : '') + '>';
+    var dname = getDisplayName(p.email);
+    html += '<tr class="lb-row" data-name="' + sanitize(dname.toLowerCase()) + '"' + (p.email === currentUserEmail ? ' style="background:#f0f7ff;font-weight:600;"' : '') + '>';
     html += '<td class="lb-rank">' + (i + 1) + '</td>';
-    html += '<td>' + avatarHtml + sanitize(getDisplayName(p.email)) + '</td>';
+    html += '<td>' + avatarHtml + sanitize(dname) + '</td>';
     html += '<td>' + p.exact + '</td><td>' + p.good + '</td>';
     html += '<td class="lb-points">' + p.total + '</td>';
     html += '</tr>';
   });
+  html += '<tr id="lb-noresult" style="display:none;"><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">' + (currentLang === 'fr' ? 'Aucun joueur trouvé' : 'No player found') + '</td></tr>';
   html += '</tbody></table>';
   container.innerHTML = html;
+}
+
+function filterLeaderboard(q) {
+  var query = (q || '').toLowerCase().trim();
+  var rows = document.querySelectorAll('#lb-tbody .lb-row');
+  var visible = 0;
+  rows.forEach(function(r) {
+    var match = !query || (r.getAttribute('data-name') || '').indexOf(query) !== -1;
+    r.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  var noRes = document.getElementById('lb-noresult');
+  if (noRes) noRes.style.display = visible === 0 ? '' : 'none';
 }
 
 // =============================================================================
@@ -1495,7 +1516,8 @@ function renderAdmin() {
     if (adminStatusFilter === 'done') return hasResult;
     if (adminStatusFilter === 'todo') {
       var k = getMatchKickoffUTC(m);
-      return !hasResult && k && k.getTime() <= nowMs; // match commencé sans résultat
+      // match terminé (coup d'envoi + ~2h10 : 90' + mi-temps + arrêts de jeu) sans résultat
+      return !hasResult && k && (k.getTime() + 130 * 60000) <= nowMs;
     }
     return true;
   });
