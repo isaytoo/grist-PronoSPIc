@@ -108,6 +108,7 @@ var topScorers = [];
 var activeTab = 'matches';
 var activePhaseFilter = 'all';
 var activeGroupFilter = '';
+var activeDateFilter = ''; // clé date locale 'YYYY-MM-DD' (fuseau navigateur) ou '' pour toutes
 
 var TEAMS_TABLE = 'Prono_Teams';
 var MATCHES_TABLE = 'Prono_Matches';
@@ -773,7 +774,29 @@ function renderMatchFilters() {
   groups.forEach(function(g) {
     html += '<button class="filter-btn ' + (activeGroupFilter === g ? 'active' : '') + '" onclick="setGroupFilter(\'' + g + '\')" style="min-width:32px;">' + g + '</button>';
   });
+  // Sélecteur de date (dates locales du navigateur)
+  html += '<span style="width:1px;height:24px;background:#e2e8f0;margin:0 4px;"></span>';
+  var locale = currentLang === 'fr' ? 'fr-FR' : 'en-US';
+  var dateKeys = [];
+  matches.forEach(function(m) { var k = matchLocalDateKey(m); if (k && dateKeys.indexOf(k) === -1) dateKeys.push(k); });
+  dateKeys.sort();
+  html += '<select class="filter-date" onchange="setDateFilter(this.value)">';
+  html += '<option value=""' + (activeDateFilter === '' ? ' selected' : '') + '>📅 ' + (currentLang === 'fr' ? 'Toutes les dates' : 'All dates') + '</option>';
+  dateKeys.forEach(function(k) {
+    var p = k.split('-');
+    var d = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+    var label = d.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' });
+    html += '<option value="' + k + '"' + (activeDateFilter === k ? ' selected' : '') + '>' + label + '</option>';
+  });
+  html += '</select>';
   container.innerHTML = html;
+}
+
+/** Clé date locale 'YYYY-MM-DD' du coup d'envoi dans le fuseau du navigateur. */
+function matchLocalDateKey(m) {
+  var d = getMatchKickoffUTC(m);
+  if (!d) return m.date || '';
+  return d.toLocaleDateString('en-CA'); // format ISO YYYY-MM-DD
 }
 
 function setPhaseFilter(phase) {
@@ -788,10 +811,16 @@ function setGroupFilter(group) {
   renderMatchesView();
 }
 
+function setDateFilter(dateKey) {
+  activeDateFilter = dateKey || '';
+  renderMatchesView();
+}
+
 function renderMatchesView() {
   renderMatchFilters();
   renderBonusBar();
   var filtered = matches.filter(function(m) {
+    if (activeDateFilter && matchLocalDateKey(m) !== activeDateFilter) return false;
     if (activeGroupFilter) return m.group === activeGroupFilter;
     if (activePhaseFilter !== 'all') return m.phase === activePhaseFilter;
     return true;
