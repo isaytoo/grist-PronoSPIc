@@ -1166,7 +1166,7 @@ function renderLeaderboard() {
   }
 
   // Recherche de joueur (filtre instantané, le rang réel est conservé)
-  if (ranked.length > 1) {
+  if (ranked.length >= 1) {
     var ph = currentLang === 'fr' ? 'Rechercher un joueur…' : 'Search a player…';
     html += '<div style="margin-bottom:12px;"><input type="text" id="lb-search" oninput="filterLeaderboard(this.value)" placeholder="🔍 ' + ph + '" style="width:100%;max-width:320px;padding:8px 12px;border:1px solid #e2e8f0;border-radius:20px;font-size:13px;"></div>';
   }
