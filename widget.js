@@ -1841,8 +1841,8 @@ if (!isInsideGrist()) {
 } else {
   (async function() {
     await grist.ready({ requiredAccess: 'full' });
+    await ensureTables();   // garantir que les tables (dont Prono_UserInfo) existent avant la détection
     await detectRole();
-    await ensureTables();
     if (isOwner) { await seedTeams(); await seedMatches(); await syncMatchesSchedule(); await dedupPredictions(); await applySecurityRules(); }
     await loadAllData();
     renderCurrentTab();
