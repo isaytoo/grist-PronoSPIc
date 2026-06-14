@@ -41,6 +41,9 @@
     .filter-date { padding: 6px 12px; border-radius: 20px; border: 1px solid #e2e8f0; background: white; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; color: #1e293b; }
     .filter-date:hover { border-color: #7c1d4e; }
     .filter-date:focus { outline: none; border-color: #7c1d4e; }
+    .day-separator { display: flex; align-items: center; gap: 12px; margin: 18px 4px 10px; color: #7c1d4e; font-size: 13px; font-weight: 700; }
+    .day-separator::before, .day-separator::after { content: ""; flex: 1; height: 1px; background: linear-gradient(to right, transparent, #e2e8f0, transparent); }
+    .day-separator span { white-space: nowrap; }
 
     /* Match Cards */
     .matches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
@@ -158,6 +161,8 @@
     body.dark-mode .filter-btn { background: #1e293b; border-color: #475569; color: #94a3b8; }
     body.dark-mode .filter-btn.active { background: #7c1d4e; color: white; }
     body.dark-mode .filter-date { background: #1e293b; border-color: #475569; color: #94a3b8; }
+    body.dark-mode .day-separator { color: #f0abfc; }
+    body.dark-mode .day-separator::before, body.dark-mode .day-separator::after { background: linear-gradient(to right, transparent, #475569, transparent); }
     body.dark-mode .group-table th, body.dark-mode .group-table td { border-color: #334155; }
 
     /* Responsive */
@@ -284,6 +289,6 @@
     <a href="https://gristup.fr" target="_blank">gristup.fr</a>
   </footer>
 
-  <script src="widget.js?v=45"></script>
+  <script src="widget.js?v=46"></script>
 </body>
 </html>
