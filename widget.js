@@ -579,6 +579,33 @@ async function syncMatchesSchedule() {
   } catch (e) { console.warn('[PronoSPIc] syncMatchesSchedule:', e.message); }
 }
 
+/**
+ * Supprime les doublons de pronostics (même User_Email + Match_Number) en ne
+ * conservant qu'une ligne par couple : la plus récente (id le plus élevé).
+ * Répare les docs où d'anciens doublons ont été créés avant la garde anti-double.
+ * Owner uniquement (droits d'écriture). Idempotent.
+ */
+async function dedupPredictions() {
+  try {
+    var pd = await grist.docApi.fetchTable(PREDICTIONS_TABLE);
+    if (!pd || !pd.id || !pd.id.length) return;
+    var seen = {}; // clé email|matchNum -> id à garder (le plus élevé)
+    for (var i = 0; i < pd.id.length; i++) {
+      var key = (pd.User_Email[i] || '').toLowerCase().trim() + '|' + pd.Match_Number[i];
+      if (seen[key] == null || pd.id[i] > seen[key]) seen[key] = pd.id[i];
+    }
+    var toRemove = [];
+    for (var j = 0; j < pd.id.length; j++) {
+      var k = (pd.User_Email[j] || '').toLowerCase().trim() + '|' + pd.Match_Number[j];
+      if (pd.id[j] !== seen[k]) toRemove.push(pd.id[j]);
+    }
+    if (toRemove.length) {
+      await grist.docApi.applyUserActions([['BulkRemoveRecord', PREDICTIONS_TABLE, toRemove]]);
+      console.log('[PronoSPIc] Doublons de pronostics supprimés :', toRemove.length);
+    }
+  } catch (e) { console.warn('[PronoSPIc] dedupPredictions:', e.message); }
+}
+
 async function loadAllData() {
   try {
     var md = await grist.docApi.fetchTable(MATCHES_TABLE);
@@ -921,27 +948,36 @@ async function saveBonus() {
 // SAVE PREDICTION
 // =============================================================================
 
+var savingPredictions = {}; // garde anti-double-validation par match (évite les doublons)
 async function savePrediction(matchNum) {
+  if (savingPredictions[matchNum]) return; // une sauvegarde est déjà en cours pour ce match
   var s1El = document.getElementById('s1-' + matchNum);
   var s2El = document.getElementById('s2-' + matchNum);
   if (!s1El || !s2El) return;
   var ps1 = parseInt(s1El.value) || 0;
   var ps2 = parseInt(s2El.value) || 0;
   var existing = predictions.find(function(p) { return p.matchNum === matchNum; });
+  savingPredictions[matchNum] = true;
   try {
-    if (existing) {
+    if (existing && existing.id != null) {
       await grist.docApi.applyUserActions([['UpdateRecord', PREDICTIONS_TABLE, existing.id, { Pred_Score1: ps1, Pred_Score2: ps2 }]]);
       existing.ps1 = ps1; existing.ps2 = ps2;
     } else {
-      await grist.docApi.applyUserActions([['AddRecord', PREDICTIONS_TABLE, null, {
+      var res = await grist.docApi.applyUserActions([['AddRecord', PREDICTIONS_TABLE, null, {
         User_Email: currentUserEmail, Match_Number: matchNum, Pred_Score1: ps1, Pred_Score2: ps2, Points: 0
       }]]);
-      var newPred = { email: currentUserEmail, matchNum: matchNum, ps1: ps1, ps2: ps2, pts: 0 };
-      predictions.push(newPred); allPredictions.push(newPred);
+      var newId = (res && res.retValues && res.retValues[0]) || null;
+      if (existing) { // objet local sans id : on le complète au lieu d'en recréer un
+        existing.id = newId; existing.ps1 = ps1; existing.ps2 = ps2;
+      } else {
+        var newPred = { id: newId, email: currentUserEmail, matchNum: matchNum, ps1: ps1, ps2: ps2, pts: 0 };
+        predictions.push(newPred); allPredictions.push(newPred);
+      }
     }
     showToast(t('saved'), 'success');
     renderMatchesView();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
+  finally { delete savingPredictions[matchNum]; }
 }
 
 // =============================================================================
@@ -1606,7 +1642,7 @@ if (!isInsideGrist()) {
     await grist.ready({ requiredAccess: 'full' });
     await detectRole();
     await ensureTables();
-    if (isOwner) { await seedTeams(); await seedMatches(); await syncMatchesSchedule(); await applySecurityRules(); }
+    if (isOwner) { await seedTeams(); await seedMatches(); await syncMatchesSchedule(); await dedupPredictions(); await applySecurityRules(); }
     await loadAllData();
     renderCurrentTab();
     setTimeout(updateHeaderUserInfo, 100);
