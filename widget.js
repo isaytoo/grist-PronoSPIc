@@ -787,13 +787,16 @@ function renderMatchFilters() {
   if (dateKeys.indexOf(todayKey) !== -1) {
     html += '<button class="filter-btn ' + (activeDateFilter === todayKey ? 'active' : '') + '" onclick="setDateFilter(\'' + todayKey + '\')">⚡ ' + (currentLang === 'fr' ? "Aujourd'hui" : 'Today') + '</button>';
   }
+  var playedKeys = getPlayedDateKeys();
   html += '<select class="filter-date" onchange="setDateFilter(this.value)">';
   html += '<option value=""' + (activeDateFilter === '' ? ' selected' : '') + '>📅 ' + (currentLang === 'fr' ? 'Toutes les dates' : 'All dates') + '</option>';
   dateKeys.forEach(function(k) {
     var p = k.split('-');
     var d = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
     var label = d.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' });
-    html += '<option value="' + k + '"' + (activeDateFilter === k ? ' selected' : '') + '>' + label + '</option>';
+    var done = playedKeys[k];
+    var style = done ? ' style="color:#b8c0cc;"' : '';
+    html += '<option value="' + k + '"' + (activeDateFilter === k ? ' selected' : '') + style + '>' + (done ? '✓ ' : '') + label + '</option>';
   });
   html += '</select>';
   container.innerHTML = html;
@@ -804,6 +807,23 @@ function matchLocalDateKey(m) {
   var d = getMatchKickoffUTC(m);
   if (!d) return m.date || '';
   return d.toLocaleDateString('en-CA'); // format ISO YYYY-MM-DD
+}
+
+/**
+ * Ensemble des dates "déjà jouées" : une date est jouée quand TOUS ses matchs
+ * ont leur coup d'envoi passé. Sert à griser ces dates dans les sélecteurs.
+ */
+function getPlayedDateKeys() {
+  var nowMs = Date.now();
+  var played = {}; // key -> true si toujours jouée jusqu'ici
+  matches.forEach(function(m) {
+    var k = matchLocalDateKey(m); if (!k) return;
+    var d = getMatchKickoffUTC(m);
+    var past = d && d.getTime() <= nowMs;
+    if (played[k] === undefined) played[k] = past;
+    else played[k] = played[k] && past;
+  });
+  return played;
 }
 
 function setPhaseFilter(phase) {
@@ -1417,13 +1437,16 @@ function renderAdmin() {
   if (dateKeys.indexOf(todayKey) !== -1) {
     html += '<button class="filter-btn ' + (adminDateFilter === todayKey ? 'active' : '') + '" onclick="setAdminDateFilter(\'' + todayKey + '\')">⚡ ' + (fr ? "Aujourd'hui" : 'Today') + '</button>';
   }
+  var playedKeysAdmin = getPlayedDateKeys();
   html += '<select class="filter-date" onchange="setAdminDateFilter(this.value)">';
   html += '<option value=""' + (adminDateFilter === '' ? ' selected' : '') + '>📅 ' + (fr ? 'Toutes les dates' : 'All dates') + '</option>';
   dateKeys.forEach(function(k) {
     var pp = k.split('-');
     var dd = new Date(parseInt(pp[0], 10), parseInt(pp[1], 10) - 1, parseInt(pp[2], 10));
     var lbl = dd.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' });
-    html += '<option value="' + k + '"' + (adminDateFilter === k ? ' selected' : '') + '>' + lbl + '</option>';
+    var done = playedKeysAdmin[k];
+    var style = done ? ' style="color:#b8c0cc;"' : '';
+    html += '<option value="' + k + '"' + (adminDateFilter === k ? ' selected' : '') + style + '>' + (done ? '✓ ' : '') + lbl + '</option>';
   });
   html += '</select></div>';
 
