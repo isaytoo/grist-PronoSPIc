@@ -1698,10 +1698,17 @@ async function detectRole() {
       } catch (e) { /* read-only */ }
 
       var tokenInfo = await grist.docApi.getAccessToken({ readOnly: true });
-      var resp = await fetch(tokenInfo.baseUrl + '/tables/' + USERINFO_TABLE + '/records?auth=' + tokenInfo.token);
-      if (resp.ok) {
-        var data = await resp.json();
-        if (data.records && data.records.length > 0) currentUserEmail = data.records[0].fields.UserEmail || '';
+      // Poll : la formule user.Email peut ne pas être recalculée immédiatement après l'AddRecord.
+      // On réessaie jusqu'à obtenir l'email (évite l'état "anon" + stats vides au chargement frais).
+      for (var attempt = 0; attempt < 8 && !currentUserEmail; attempt++) {
+        if (attempt > 0) await new Promise(function(r) { setTimeout(r, 250); });
+        try {
+          var resp = await fetch(tokenInfo.baseUrl + '/tables/' + USERINFO_TABLE + '/records?auth=' + tokenInfo.token);
+          if (resp.ok) {
+            var data = await resp.json();
+            if (data.records && data.records.length > 0) currentUserEmail = data.records[0].fields.UserEmail || '';
+          }
+        } catch (e) { /* réessai */ }
       }
     }
   } catch (e) { /* ignore */ }
