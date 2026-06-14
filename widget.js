@@ -1847,5 +1847,38 @@ if (!isInsideGrist()) {
     await loadAllData();
     renderCurrentTab();
     setTimeout(updateHeaderUserInfo, 100);
+    // Filet de sécurité : si l'email n'a pas pu être détecté à temps (recalcul Grist lent),
+    // on continue à le chercher en arrière-plan et on rafraîchit l'affichage dès qu'il arrive.
+    if (!currentUserEmail) retryUserEmailUntilFound();
   })();
+}
+
+/** Récupère l'email courant via la table UserInfo + access token (sans recréer de ligne). */
+async function fetchUserEmail() {
+  try {
+    var tables = await grist.docApi.listTables();
+    if (tables.indexOf(USERINFO_TABLE) === -1) return '';
+    var tokenInfo = await grist.docApi.getAccessToken({ readOnly: true });
+    var resp = await fetch(tokenInfo.baseUrl + '/tables/' + USERINFO_TABLE + '/records?auth=' + tokenInfo.token);
+    if (resp.ok) {
+      var data = await resp.json();
+      if (data.records && data.records.length > 0) return data.records[0].fields.UserEmail || '';
+    }
+  } catch (e) { /* réessai */ }
+  return '';
+}
+
+/** Poll en arrière-plan jusqu'à obtenir l'email, puis refiltre les pronos et rafraîchit l'UI. */
+async function retryUserEmailUntilFound() {
+  for (var i = 0; i < 20 && !currentUserEmail; i++) {
+    await new Promise(function(r) { setTimeout(r, 500); });
+    var em = await fetchUserEmail();
+    if (em) {
+      currentUserEmail = em;
+      predictions = allPredictions.filter(function(p) { return (p.email || '').toLowerCase().trim() === currentUserEmail.toLowerCase().trim(); });
+      updateHeaderUserInfo();
+      renderCurrentTab();
+      break;
+    }
+  }
 }
