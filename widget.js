@@ -474,16 +474,45 @@ function renderCurrentTab() {
 // GRIST: TABLE MANAGEMENT
 // =============================================================================
 
+// Vrai si la table existe, OU si une variante numérotée existe (Prono_Bonus2, 3…)
+// -> évite de recréer une table (et donc une page) en boucle.
+function tableExistsLike(tables, base) {
+  if (tables.indexOf(base) !== -1) return true;
+  var re = new RegExp('^' + base + '\\d+$');
+  for (var i = 0; i < tables.length; i++) if (re.test(tables[i])) return true;
+  return false;
+}
+
+// Supprime les tables doublons numérotées (Prono_Bonus2, Prono_Matches3…) VIDES.
+async function cleanupDuplicateTables() {
+  try {
+    var bases = [TEAMS_TABLE, MATCHES_TABLE, PREDICTIONS_TABLE, BONUS_TABLE, USERINFO_TABLE, PROFILES_TABLE];
+    var tables = await grist.docApi.listTables();
+    var actions = [], removed = 0;
+    for (var i = 0; i < tables.length; i++) {
+      var tid = tables[i];
+      var isVariant = bases.some(function (b) { return new RegExp('^' + b + '\\d+$').test(tid); });
+      if (!isVariant) continue;
+      var empty = true;
+      try { var d = await grist.docApi.fetchTable(tid); empty = !d || !d.id || d.id.length === 0; } catch (e) { empty = true; }
+      if (empty) { actions.push(['RemoveTable', tid]); removed++; }
+    }
+    if (actions.length) await grist.docApi.applyUserActions(actions);
+    if (removed) console.log('[PronoSPIc] ' + removed + ' table(s) doublon supprimée(s).');
+    return removed;
+  } catch (e) { console.warn('[PronoSPIc] cleanupDuplicateTables:', e.message); return 0; }
+}
+
 async function ensureTables() {
   try {
     var tables = await grist.docApi.listTables();
-    if (tables.indexOf(TEAMS_TABLE) === -1) {
+    if (!tableExistsLike(tables, TEAMS_TABLE)) {
       await grist.docApi.applyUserActions([['AddTable', TEAMS_TABLE, [
         { id: 'Code', type: 'Text' }, { id: 'Name_FR', type: 'Text' }, { id: 'Name_EN', type: 'Text' },
         { id: 'Group_Letter', type: 'Text' }, { id: 'FlagCode', type: 'Text' }
       ]]]);
     }
-    if (tables.indexOf(MATCHES_TABLE) === -1) {
+    if (!tableExistsLike(tables, MATCHES_TABLE)) {
       await grist.docApi.applyUserActions([['AddTable', MATCHES_TABLE, [
         { id: 'Match_Number', type: 'Int' }, { id: 'Phase', type: 'Text' }, { id: 'Group_Letter', type: 'Text' },
         { id: 'Team1_Code', type: 'Text' }, { id: 'Team2_Code', type: 'Text' },
@@ -492,20 +521,20 @@ async function ensureTables() {
         { id: 'Score1', type: 'Int' }, { id: 'Score2', type: 'Int' }
       ]]]);
     }
-    if (tables.indexOf(PREDICTIONS_TABLE) === -1) {
+    if (!tableExistsLike(tables, PREDICTIONS_TABLE)) {
       await grist.docApi.applyUserActions([['AddTable', PREDICTIONS_TABLE, [
         { id: 'User_Email', type: 'Text' }, { id: 'Match_Number', type: 'Int' },
         { id: 'Pred_Score1', type: 'Int' }, { id: 'Pred_Score2', type: 'Int' },
         { id: 'Points', type: 'Int' }
       ]]]);
     }
-    if (tables.indexOf(BONUS_TABLE) === -1) {
+    if (!tableExistsLike(tables, BONUS_TABLE)) {
       await grist.docApi.applyUserActions([['AddTable', BONUS_TABLE, [
         { id: 'User_Email', type: 'Text' }, { id: 'Winner_Code', type: 'Text' },
         { id: 'Top_Scorer', type: 'Text' }, { id: 'Points', type: 'Int' }
       ]]]);
     }
-    if (tables.indexOf(USERINFO_TABLE) === -1) {
+    if (!tableExistsLike(tables, USERINFO_TABLE)) {
       await grist.docApi.applyUserActions([['AddTable', USERINFO_TABLE, [
         { id: 'UserEmail', fields: { type: 'Text', label: 'UserEmail' } }
       ]]]);
@@ -513,7 +542,7 @@ async function ensureTables() {
         isFormula: false, formula: 'user.Email', recalcWhen: 2, recalcDeps: null
       }]]);
     }
-    if (tables.indexOf(PROFILES_TABLE) === -1) {
+    if (!tableExistsLike(tables, PROFILES_TABLE)) {
       await grist.docApi.applyUserActions([['AddTable', PROFILES_TABLE, [
         { id: 'User_Email', type: 'Text' }, { id: 'Display_Name', type: 'Text' },
         { id: 'Avatar_URL', type: 'Text' }
@@ -1843,7 +1872,7 @@ if (!isInsideGrist()) {
     await grist.ready({ requiredAccess: 'full' });
     await ensureTables();   // garantir que les tables (dont Prono_UserInfo) existent avant la détection
     await detectRole();
-    if (isOwner) { await seedTeams(); await seedMatches(); await syncMatchesSchedule(); await dedupPredictions(); await applySecurityRules(); }
+    if (isOwner) { await cleanupDuplicateTables(); await seedTeams(); await seedMatches(); await syncMatchesSchedule(); await dedupPredictions(); await applySecurityRules(); }
     await loadAllData();
     renderCurrentTab();
     setTimeout(updateHeaderUserInfo, 100);
