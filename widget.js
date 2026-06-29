@@ -315,6 +315,160 @@ var MATCH_DATA = [
 
 
 // =============================================================================
+// BRACKET DYNAMIQUE — remplissage automatique des phases finales (FIFA 2026)
+// Source : règlement officiel FIFA 2026 (annexe round of 32 + arbre de propagation).
+// Les slots ci-dessous sont FIXES (indépendants des résultats). On résout :
+//   - 1er/2e de groupe dès qu'un groupe est terminé ;
+//   - 8 meilleurs 3es dès que TOUS les groupes sont terminés ;
+//   - propagation des vainqueurs (et perdants pour la 3e place) à chaque tour.
+// =============================================================================
+
+// Round of 32 : pos = 1 (vainqueur) / 2 (2e) ; third = liste des groupes autorisés.
+var R32_SLOTS = {
+  73: { a: { pos: 2, g: 'A' },             b: { pos: 2, g: 'B' } },
+  74: { a: { pos: 1, g: 'E' },             b: { third: ['A','B','C','D','F'] } },
+  75: { a: { pos: 1, g: 'F' },             b: { pos: 2, g: 'C' } },
+  76: { a: { pos: 1, g: 'C' },             b: { pos: 2, g: 'F' } },
+  77: { a: { pos: 1, g: 'I' },             b: { third: ['C','D','F','G','H'] } },
+  78: { a: { pos: 2, g: 'E' },             b: { pos: 2, g: 'I' } },
+  79: { a: { pos: 1, g: 'A' },             b: { third: ['C','E','F','H','I'] } },
+  80: { a: { pos: 1, g: 'L' },             b: { third: ['E','H','I','J','K'] } },
+  81: { a: { pos: 1, g: 'D' },             b: { third: ['B','E','F','I','J'] } },
+  82: { a: { pos: 1, g: 'G' },             b: { third: ['A','E','H','I','J'] } },
+  83: { a: { pos: 2, g: 'K' },             b: { pos: 2, g: 'L' } },
+  84: { a: { pos: 1, g: 'H' },             b: { pos: 2, g: 'J' } },
+  85: { a: { pos: 1, g: 'B' },             b: { third: ['E','F','G','I','J'] } },
+  86: { a: { pos: 1, g: 'J' },             b: { pos: 2, g: 'H' } },
+  87: { a: { pos: 1, g: 'K' },             b: { third: ['D','E','I','J','L'] } },
+  88: { a: { pos: 2, g: 'D' },             b: { pos: 2, g: 'G' } }
+};
+
+// Matchs R32 alimentés par un 3e (côté b) + groupes autorisés (= annexe FIFA).
+var THIRD_SLOTS = {
+  74: ['A','B','C','D','F'],
+  77: ['C','D','F','G','H'],
+  79: ['C','E','F','H','I'],
+  80: ['E','H','I','J','K'],
+  81: ['B','E','F','I','J'],
+  82: ['A','E','H','I','J'],
+  85: ['E','F','G','I','J'],
+  87: ['D','E','I','J','L']
+};
+
+// Propagation des VAINQUEURS : matchNum -> [match source 1, match source 2].
+var WINNER_OF = {
+  89: [74, 77], 90: [73, 75], 91: [76, 78], 92: [79, 80],
+  93: [83, 84], 94: [81, 82], 95: [86, 88], 96: [85, 87],
+  97: [89, 90], 98: [93, 94], 99: [91, 92], 100: [95, 96],
+  101: [97, 98], 102: [99, 100],
+  104: [101, 102]
+};
+// Match pour la 3e place : perdants des demi-finales.
+var LOSER_OF = { 103: [101, 102] };
+
+// Ordre de résolution (croissant) pour propager correctement de tour en tour.
+var KO_PROPAGATION_ORDER = [89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104];
+
+// Classement d'un groupe : pts, puis diff. de buts, puis buts marqués.
+function computeStandings(group) {
+  var groupTeams = TEAM_DATA.filter(function(t) { return t.group === group; });
+  var groupMatches = matches.filter(function(m) { return m.group === group && m.s1 >= 0 && m.s2 >= 0; });
+  return groupTeams.map(function(team) {
+    var s = { code: team.code, flag: team.flag, group: group, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 };
+    groupMatches.forEach(function(m) {
+      if (m.t1 === team.code) { s.p++; s.gf += m.s1; s.ga += m.s2; if (m.s1 > m.s2) { s.w++; s.pts += 3; } else if (m.s1 === m.s2) { s.d++; s.pts += 1; } else { s.l++; } }
+      if (m.t2 === team.code) { s.p++; s.gf += m.s2; s.ga += m.s1; if (m.s2 > m.s1) { s.w++; s.pts += 3; } else if (m.s2 === m.s1) { s.d++; s.pts += 1; } else { s.l++; } }
+    });
+    s.diff = s.gf - s.ga;
+    return s;
+  }).sort(function(a, b) { return b.pts - a.pts || b.diff - a.diff || b.gf - a.gf; });
+}
+
+// Affecte chaque 3e qualifié à un match R32 autorisé (matching biparti par chemins augmentants).
+function assignThirds(qualGroups) {
+  var slots = Object.keys(THIRD_SLOTS).map(Number);
+  var matchOf = {}, groupUsed = {};
+  function tryAssign(slot, visited) {
+    var allowed = THIRD_SLOTS[slot];
+    for (var i = 0; i < allowed.length; i++) {
+      var g = allowed[i];
+      if (qualGroups.indexOf(g) === -1 || visited[g]) continue;
+      visited[g] = true;
+      if (groupUsed[g] === undefined || tryAssign(groupUsed[g], visited)) {
+        groupUsed[g] = slot; matchOf[slot] = g; return true;
+      }
+    }
+    return false;
+  }
+  slots.forEach(function(s) { tryAssign(s, {}); });
+  return matchOf; // slot -> groupe
+}
+
+// Calcule et remplit (en mémoire) les équipes des phases finales à partir des résultats.
+function computeBracket() {
+  if (!matches || !matches.length) return;
+  var groups = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+  var standingsByGroup = {}, groupComplete = {};
+  groups.forEach(function(g) {
+    standingsByGroup[g] = computeStandings(g);
+    var gm = matches.filter(function(m) { return m.group === g; });
+    groupComplete[g] = gm.length >= 6 && gm.every(function(m) { return m.s1 >= 0 && m.s2 >= 0; });
+  });
+  var allGroupsDone = groups.every(function(g) { return groupComplete[g]; });
+
+  function matchByNum(n) { return matches.find(function(m) { return m.num === n; }); }
+  function codeAt(spec) {
+    if (spec.pos) {
+      if (!groupComplete[spec.g]) return 'TBD';
+      var st = standingsByGroup[spec.g];
+      return (st && st[spec.pos - 1]) ? st[spec.pos - 1].code : 'TBD';
+    }
+    return 'TBD'; // les 3es sont résolus séparément
+  }
+
+  // 1) Round of 32 : 1ers / 2es
+  Object.keys(R32_SLOTS).forEach(function(numStr) {
+    var num = Number(numStr), slot = R32_SLOTS[num], m = matchByNum(num);
+    if (!m) return;
+    m.t1 = slot.a.third ? 'TBD' : codeAt(slot.a);
+    m.t2 = slot.b.third ? 'TBD' : codeAt(slot.b);
+  });
+
+  // 2) Meilleurs 3es (uniquement quand tous les groupes sont terminés)
+  if (allGroupsDone) {
+    var thirds = groups
+      .map(function(g) { return standingsByGroup[g][2]; })
+      .filter(Boolean)
+      .sort(function(a, b) { return b.pts - a.pts || b.diff - a.diff || b.gf - a.gf; });
+    var qualGroups = thirds.slice(0, 8).map(function(s) { return s.group; });
+    var slotToGroup = assignThirds(qualGroups);
+    Object.keys(THIRD_SLOTS).forEach(function(numStr) {
+      var num = Number(numStr), g = slotToGroup[num], m = matchByNum(num);
+      if (m && g && standingsByGroup[g][2]) m.t2 = standingsByGroup[g][2].code;
+    });
+  }
+
+  // 3) Propagation des vainqueurs / perdants (R16 -> Finale + 3e place)
+  function winnerCode(n) {
+    var m = matchByNum(n);
+    if (!m || m.t1 === 'TBD' || m.t2 === 'TBD' || m.s1 < 0 || m.s2 < 0) return 'TBD';
+    if (m.s1 > m.s2) return m.t1; if (m.s2 > m.s1) return m.t2; return 'TBD';
+  }
+  function loserCode(n) {
+    var m = matchByNum(n);
+    if (!m || m.t1 === 'TBD' || m.t2 === 'TBD' || m.s1 < 0 || m.s2 < 0) return 'TBD';
+    if (m.s1 > m.s2) return m.t2; if (m.s2 > m.s1) return m.t1; return 'TBD';
+  }
+  KO_PROPAGATION_ORDER.forEach(function(num) {
+    var m = matchByNum(num);
+    if (!m) return;
+    if (WINNER_OF[num]) { m.t1 = winnerCode(WINNER_OF[num][0]); m.t2 = winnerCode(WINNER_OF[num][1]); }
+    else if (LOSER_OF[num]) { m.t1 = loserCode(LOSER_OF[num][0]); m.t2 = loserCode(LOSER_OF[num][1]); }
+  });
+}
+
+
+// =============================================================================
 // UTILS
 // =============================================================================
 
@@ -655,6 +809,7 @@ async function loadAllData() {
       }
     }
     matches.sort(function(a, b) { return a.num - b.num; });
+    computeBracket();
   } catch (e) { matches = []; }
 
   try {
