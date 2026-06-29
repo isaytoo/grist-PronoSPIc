@@ -1846,6 +1846,9 @@ async function saveResult(matchId, matchNum) {
     var m = matches.find(function(mm) { return mm.id === matchId; });
     if (m) { m.s1 = s1; m.s2 = s2; }
     await recalculatePointsForMatch(matchNum, s1, s2);
+    // Propage immédiatement les équipes qualifiées vers le tour suivant (1/8, 1/4, 1/2, finale, 3e place).
+    computeBracket();
+    if (activeTab === 'admin') renderAdmin();
     showToast(t('adminSave') + ' ✓', 'success');
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
 }
