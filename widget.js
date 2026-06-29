@@ -535,12 +535,20 @@ function computeBracket() {
   function winnerCode(n) {
     var m = matchByNum(n);
     if (!m || m.t1 === 'TBD' || m.t2 === 'TBD' || m.s1 < 0 || m.s2 < 0) return 'TBD';
-    if (m.s1 > m.s2) return m.t1; if (m.s2 > m.s1) return m.t2; return 'TBD';
+    if (m.s1 > m.s2) return m.t1;
+    if (m.s2 > m.s1) return m.t2;
+    // Égalité (KO) -> tirs au but : on s'appuie sur le vainqueur saisi.
+    if (m.penWinner === m.t1 || m.penWinner === m.t2) return m.penWinner;
+    return 'TBD';
   }
   function loserCode(n) {
     var m = matchByNum(n);
     if (!m || m.t1 === 'TBD' || m.t2 === 'TBD' || m.s1 < 0 || m.s2 < 0) return 'TBD';
-    if (m.s1 > m.s2) return m.t2; if (m.s2 > m.s1) return m.t1; return 'TBD';
+    if (m.s1 > m.s2) return m.t2;
+    if (m.s2 > m.s1) return m.t1;
+    if (m.penWinner === m.t1) return m.t2;
+    if (m.penWinner === m.t2) return m.t1;
+    return 'TBD';
   }
   KO_PROPAGATION_ORDER.forEach(function(num) {
     var m = matchByNum(num);
@@ -755,7 +763,8 @@ async function ensureTables() {
         { id: 'Team1_Code', type: 'Text' }, { id: 'Team2_Code', type: 'Text' },
         { id: 'Match_Date', type: 'Text' }, { id: 'Match_Time', type: 'Text' },
         { id: 'Stadium', type: 'Text' }, { id: 'City', type: 'Text' },
-        { id: 'Score1', type: 'Int' }, { id: 'Score2', type: 'Int' }
+        { id: 'Score1', type: 'Int' }, { id: 'Score2', type: 'Int' },
+        { id: 'Pen_Winner', type: 'Text' }
       ]]]);
     }
     if (!tableExistsLike(tables, PREDICTIONS_TABLE)) {
@@ -814,6 +823,20 @@ async function seedMatches() {
     });
     await grist.docApi.applyUserActions(actions);
   } catch (e) { console.warn('[PronoSPIc] seedMatches:', e.message); }
+}
+
+/**
+ * Évolution de schéma : ajoute la colonne Pen_Winner (vainqueur aux tirs au but,
+ * code équipe) à Prono_Matches si elle manque. Owner uniquement. Idempotent.
+ */
+async function ensureMatchColumns() {
+  try {
+    var md = await grist.docApi.fetchTable(MATCHES_TABLE);
+    if (md && md.Pen_Winner === undefined) {
+      await grist.docApi.applyUserActions([['AddColumn', MATCHES_TABLE, 'Pen_Winner', { type: 'Text' }]]);
+      console.log('[PronoSPIc] Colonne Pen_Winner ajoutée à ' + MATCHES_TABLE + '.');
+    }
+  } catch (e) { console.warn('[PronoSPIc] ensureMatchColumns:', e.message); }
 }
 
 /**
@@ -887,7 +910,8 @@ async function loadAllData() {
           t1: md.Team1_Code[i], t2: md.Team2_Code[i], date: md.Match_Date[i], time: md.Match_Time[i],
           stadium: md.Stadium[i], city: md.City[i],
           s1: md.Score1[i] !== undefined ? md.Score1[i] : -1,
-          s2: md.Score2[i] !== undefined ? md.Score2[i] : -1
+          s2: md.Score2[i] !== undefined ? md.Score2[i] : -1,
+          penWinner: (md.Pen_Winner && md.Pen_Winner[i] != null) ? md.Pen_Winner[i] : ''
         });
       }
     }
@@ -1815,6 +1839,18 @@ function renderAdmin() {
     html += '</div>';
     html += '<button class="admin-save-btn" onclick="saveResult(' + m.id + ',' + m.num + ')">' + t('adminSave') + '</button>';
     html += '</div>';
+    // Match à élimination directe terminé sur un nul -> sélection du vainqueur aux tirs au but.
+    var isKO = m.phase && m.phase !== 'group';
+    if (isKO && m.s1 >= 0 && m.s2 >= 0 && m.s1 === m.s2) {
+      html += '<div style="display:flex;align-items:center;gap:8px;margin:-6px 2px 10px;padding:8px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;font-size:12px;">';
+      html += '<span style="font-weight:700;color:#c2410c;">🥅 ' + (fr ? 'Vainqueur aux tirs au but' : 'Penalty shootout winner') + ' :</span>';
+      html += '<select class="admin-pen-select" id="admin-pen-' + m.num + '" style="padding:6px 8px;border:1px solid #fdba74;border-radius:6px;font-size:12px;" onchange="saveResult(' + m.id + ',' + m.num + ')">';
+      html += '<option value="">' + (fr ? '— à désigner —' : '— to designate —') + '</option>';
+      html += '<option value="' + m.t1 + '"' + (m.penWinner === m.t1 ? ' selected' : '') + '>' + teamName(m.t1) + '</option>';
+      html += '<option value="' + m.t2 + '"' + (m.penWinner === m.t2 ? ' selected' : '') + '>' + teamName(m.t2) + '</option>';
+      html += '</select>';
+      html += '</div>';
+    }
   });
   container.innerHTML = html;
 }
@@ -1841,10 +1877,14 @@ async function saveResult(matchId, matchNum) {
     showToast(currentLang === 'fr' ? 'Saisis les deux scores' : 'Enter both scores', 'error');
     return;
   }
+  var m = matches.find(function(mm) { return mm.id === matchId; });
+  // Vainqueur aux tirs au but : pertinent uniquement pour un match KO terminé sur un nul.
+  var isKO = m && m.phase && m.phase !== 'group';
+  var penEl = document.getElementById('admin-pen-' + matchNum);
+  var penWinner = (isKO && s1 === s2 && penEl) ? penEl.value : '';
   try {
-    await grist.docApi.applyUserActions([['UpdateRecord', MATCHES_TABLE, matchId, { Score1: s1, Score2: s2 }]]);
-    var m = matches.find(function(mm) { return mm.id === matchId; });
-    if (m) { m.s1 = s1; m.s2 = s2; }
+    await grist.docApi.applyUserActions([['UpdateRecord', MATCHES_TABLE, matchId, { Score1: s1, Score2: s2, Pen_Winner: penWinner }]]);
+    if (m) { m.s1 = s1; m.s2 = s2; m.penWinner = penWinner; }
     await recalculatePointsForMatch(matchNum, s1, s2);
     // Propage immédiatement les équipes qualifiées vers le tour suivant (1/8, 1/4, 1/2, finale, 3e place).
     computeBracket();
@@ -2093,6 +2133,8 @@ async function fetchMatchResults() {
     for (var ui = 0; ui < updatedMatches.length; ui++) {
       await recalculatePointsForMatch(updatedMatches[ui].num, updatedMatches[ui].newScore1, updatedMatches[ui].newScore2);
     }
+    // Propage les équipes qualifiées (1/16 -> finale) après mise à jour des scores.
+    computeBracket();
     renderCurrentTab();
     showToast(updatedMatches.length + (currentLang === 'fr' ? ' résultat(s) mis à jour ✓' : ' result(s) updated ✓'), 'success');
   } catch (error) {
@@ -2113,7 +2155,7 @@ if (!isInsideGrist()) {
     await grist.ready({ requiredAccess: 'full' });
     await ensureTables();   // garantir que les tables (dont Prono_UserInfo) existent avant la détection
     await detectRole();
-    if (isOwner) { await cleanupDuplicateTables(); await seedTeams(); await seedMatches(); await syncMatchesSchedule(); await dedupPredictions(); await applySecurityRules(); }
+    if (isOwner) { await cleanupDuplicateTables(); await seedTeams(); await seedMatches(); await ensureMatchColumns(); await syncMatchesSchedule(); await dedupPredictions(); await applySecurityRules(); }
     await loadAllData();
     renderCurrentTab();
     setTimeout(updateHeaderUserInfo, 100);
