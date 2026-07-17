@@ -2097,11 +2097,25 @@ async function fetchMatchResults() {
           var tmp = apiScore1; apiScore1 = apiScore2; apiScore2 = tmp;
         }
 
+        // Match KO nul à 90 min : on détermine l'équipe qualifiée via la
+        // prolongation (score.et) puis les tirs au but (score.p) fournis par la
+        // source. On la stocke dans Pen_Winner (code d'équipe, indépendant de
+        // l'ordre local). Match de groupe ou victoire à 90 min => pas de vainqueur t.a.b.
+        var newPen = '';
+        if (localMatch.phase !== 'group' && apiScore1 === apiScore2) {
+          var sc = apiMatch.score, wSide = 0; // 1 = équipe API 1, 2 = équipe API 2
+          if (sc.et && sc.et[0] != null && sc.et[0] !== sc.et[1]) wSide = sc.et[0] > sc.et[1] ? 1 : 2;
+          else if (sc.p && sc.p[0] != null && sc.p[0] !== sc.p[1]) wSide = sc.p[0] > sc.p[1] ? 1 : 2;
+          if (wSide) newPen = (wSide === 1) ? apiCode1 : apiCode2;
+        }
+        var curPen = localMatch.penWinner || '';
+
         appliedNums[localMatch.num] = true;
-        if (localMatch.s1 !== apiScore1 || localMatch.s2 !== apiScore2) {
+        if (localMatch.s1 !== apiScore1 || localMatch.s2 !== apiScore2 || curPen !== newPen) {
           localMatch.s1 = apiScore1; // appliqué en mémoire pour que computeBracket propage
           localMatch.s2 = apiScore2;
-          updatedMatches.push({ id: localMatch.id, num: localMatch.num, newScore1: apiScore1, newScore2: apiScore2 });
+          localMatch.penWinner = newPen;
+          updatedMatches.push({ id: localMatch.id, num: localMatch.num, newScore1: apiScore1, newScore2: apiScore2, newPen: newPen });
           passUpdated++;
         }
       }
@@ -2144,7 +2158,7 @@ async function fetchMatchResults() {
     }
 
     var updateActions = updatedMatches.map(function(um) {
-      return ['UpdateRecord', MATCHES_TABLE, um.id, { Score1: um.newScore1, Score2: um.newScore2 }];
+      return ['UpdateRecord', MATCHES_TABLE, um.id, { Score1: um.newScore1, Score2: um.newScore2, Pen_Winner: um.newPen || '' }];
     });
     await grist.docApi.applyUserActions(updateActions);
     // Scores déjà appliqués en mémoire pendant la boucle à point fixe ci-dessus.
