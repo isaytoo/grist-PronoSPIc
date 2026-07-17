@@ -2060,33 +2060,54 @@ async function fetchMatchResults() {
     var response = await fetch(WORLD_CUP_API_URL);
     if (!response.ok) throw new Error('HTTP ' + response.status);
     var data = await response.json();
+    var apiMatches = data.matches || [];
     var updatedMatches = [];
+    var appliedNums = {}; // matchs déjà pris en compte durant ce rafraîchissement
     var apiScoredCount = 0; // nb de matchs ayant un score publié dans la source
 
-    for (var ai = 0; ai < data.matches.length; ai++) {
-      var apiMatch = data.matches[ai];
-      if (apiMatch.score && apiMatch.score.ft && apiMatch.score.ft[0] != null && apiMatch.score.ft[1] != null) apiScoredCount++;
-      var apiT1Name = apiMatch.team1 || '';
-      var apiT2Name = apiMatch.team2 || '';
-      var apiCode1 = TEAM_NAME_TO_CODE[apiT1Name] || apiT1Name;
-      var apiCode2 = TEAM_NAME_TO_CODE[apiT2Name] || apiT2Name;
+    // Comptage des scores publiés dans la source (indépendant du bracket).
+    for (var si = 0; si < apiMatches.length; si++) {
+      var sc = apiMatches[si].score;
+      if (sc && sc.ft && sc.ft[0] != null && sc.ft[1] != null) apiScoredCount++;
+    }
 
-      var localMatch = matches.find(function(m) {
-        return (m.t1 === apiCode1 && m.t2 === apiCode2) || (m.t1 === apiCode2 && m.t2 === apiCode1);
-      });
+    // Boucle à point fixe : on applique les scores trouvés, on propage le bracket
+    // (computeBracket) puis on refait une passe tant que de nouvelles équipes se
+    // résolvent. Ainsi un seul clic remplit toute la cascade groupes -> finale.
+    var passUpdated;
+    do {
+      passUpdated = 0;
+      for (var ai = 0; ai < apiMatches.length; ai++) {
+        var apiMatch = apiMatches[ai];
+        if (!apiMatch.score || !apiMatch.score.ft || apiMatch.score.ft[0] == null || apiMatch.score.ft[1] == null) continue;
+        var apiCode1 = TEAM_NAME_TO_CODE[apiMatch.team1 || ''] || (apiMatch.team1 || '');
+        var apiCode2 = TEAM_NAME_TO_CODE[apiMatch.team2 || ''] || (apiMatch.team2 || '');
 
-      if (localMatch && apiMatch.score && apiMatch.score.ft) {
+        // On n'apparie que des matchs dont les 2 équipes sont résolues (pas TBD).
+        var localMatch = matches.find(function(m) {
+          return m.t1 !== 'TBD' && m.t2 !== 'TBD' &&
+            ((m.t1 === apiCode1 && m.t2 === apiCode2) || (m.t1 === apiCode2 && m.t2 === apiCode1));
+        });
+        if (!localMatch || appliedNums[localMatch.num]) continue;
+
         var apiScore1 = apiMatch.score.ft[0];
         var apiScore2 = apiMatch.score.ft[1];
-        // If API has teams in reverse order, swap scores
+        // Si l'API a les équipes dans l'ordre inverse, on échange les scores.
         if (localMatch.t1 === apiCode2 && localMatch.t2 === apiCode1) {
           var tmp = apiScore1; apiScore1 = apiScore2; apiScore2 = tmp;
         }
+
+        appliedNums[localMatch.num] = true;
         if (localMatch.s1 !== apiScore1 || localMatch.s2 !== apiScore2) {
+          localMatch.s1 = apiScore1; // appliqué en mémoire pour que computeBracket propage
+          localMatch.s2 = apiScore2;
           updatedMatches.push({ id: localMatch.id, num: localMatch.num, newScore1: apiScore1, newScore2: apiScore2 });
+          passUpdated++;
         }
       }
-    }
+      // Propage les équipes nouvellement qualifiées avant la passe suivante.
+      if (passUpdated > 0) computeBracket();
+    } while (passUpdated > 0);
 
     // Extract top scorers — format openfootball : goals1 (équipe 1) et goals2 (équipe 2)
     // par match, chaque entrée { name, minute, penalty?, owngoal? }. Les csc ne comptent pas.
@@ -2126,14 +2147,11 @@ async function fetchMatchResults() {
       return ['UpdateRecord', MATCHES_TABLE, um.id, { Score1: um.newScore1, Score2: um.newScore2 }];
     });
     await grist.docApi.applyUserActions(updateActions);
-    updatedMatches.forEach(function(um) {
-      var lm = matches.find(function(mm) { return mm.id === um.id; });
-      if (lm) { lm.s1 = um.newScore1; lm.s2 = um.newScore2; }
-    });
+    // Scores déjà appliqués en mémoire pendant la boucle à point fixe ci-dessus.
     for (var ui = 0; ui < updatedMatches.length; ui++) {
       await recalculatePointsForMatch(updatedMatches[ui].num, updatedMatches[ui].newScore1, updatedMatches[ui].newScore2);
     }
-    // Propage les équipes qualifiées (1/16 -> finale) après mise à jour des scores.
+    // Propagation finale des équipes qualifiées (1/16 -> finale).
     computeBracket();
     renderCurrentTab();
     showToast(updatedMatches.length + (currentLang === 'fr' ? ' résultat(s) mis à jour ✓' : ' result(s) updated ✓'), 'success');
